@@ -1,0 +1,5 @@
+name = "pyxis-smart-account"
+
+[wasm]
+contract_dir      = "contracts"
+optimizer_version = "0.14.0"
