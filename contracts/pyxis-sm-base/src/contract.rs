@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -43,11 +43,21 @@ pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: PyxisExecuteMsg,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        PyxisExecuteMsg::PreExecute { .. } => pre_execute(deps, env, info, msg),
-        PyxisExecuteMsg::AfterExecute { .. } => after_execute(deps, env, info, msg),
+        ExecuteMsg::PyxisExecuteMsg(pyxis_msg) => match pyxis_msg {
+            PyxisExecuteMsg::PreExecute { .. } => Ok(Response::default()),
+            PyxisExecuteMsg::AfterExecute { .. } => Ok(Response::default()),
+        },
+        ExecuteMsg::RegisterPlugin {
+            plugin_address,
+            checksum,
+            config,
+        } => register_plugin(plugin_address, checksum, config),
+        ExecuteMsg::UnregisterPlugin { plugin_address } => unregister_plugin(plugin_address),
+        ExecuteMsg::EnablePlugin { plugin_address } => enable_plugin(plugin_address),
+        ExecuteMsg::DisablePlugin { plugin_address } => disable_plugin(plugin_address),
     }
 }
 
@@ -66,6 +76,26 @@ pub fn after_execute(
     _info: MessageInfo,
     _msg: PyxisExecuteMsg,
 ) -> Result<Response, ContractError> {
+    Ok(Response::default())
+}
+
+pub fn register_plugin(
+    plugin_address: Addr,
+    checksum: String,
+    config: String,
+) -> Result<Response, ContractError> {
+    Ok(Response::default())
+}
+
+pub fn unregister_plugin(plugin_address: Addr) -> Result<Response, ContractError> {
+    Ok(Response::default())
+}
+
+pub fn enable_plugin(plugin_address: Addr) -> Result<Response, ContractError> {
+    Ok(Response::default())
+}
+
+pub fn disable_plugin(plugin_address: Addr) -> Result<Response, ContractError> {
     Ok(Response::default())
 }
 

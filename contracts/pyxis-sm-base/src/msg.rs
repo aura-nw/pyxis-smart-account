@@ -1,4 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
+use pyxis_sm::msg::PyxisExecuteMsg;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
@@ -6,7 +8,23 @@ pub struct InstantiateMsg {}
 
 /// Message type for `execute` entry_point
 #[cw_serde]
-pub enum ExecuteMsg {}
+pub enum ExecuteMsg {
+    RegisterPlugin {
+        plugin_address: Addr,
+        checksum: String,
+        config: String,
+    },
+    UnregisterPlugin {
+        plugin_address: Addr,
+    },
+    EnablePlugin {
+        plugin_address: Addr,
+    },
+    DisablePlugin {
+        plugin_address: Addr,
+    },
+    PyxisExecuteMsg(PyxisExecuteMsg),
+}
 
 /// Message type for `migrate` entry_point
 #[cw_serde]
