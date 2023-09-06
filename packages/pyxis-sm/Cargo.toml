@@ -1,0 +1,16 @@
+[package]
+name          = "pyxis-sm"
+description   = "Definition and types for Pyxis Smart Account interface"
+authors       = ["Vu Ngoc Quang <quangvn@aura.network"]
+version       = { workspace = true }
+edition       = { workspace = true }
+resolver      = "2"
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+documentation = { workspace = true }
+
+[dependencies]
+cosmwasm-std    = { workspace = true }
+cosmwasm-schema = { workspace = true }
+serde           = { workspace = true }
