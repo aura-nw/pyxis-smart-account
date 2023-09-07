@@ -17,12 +17,6 @@ pub enum ExecuteMsg {
     UnregisterPlugin {
         plugin_address: Addr,
     },
-    EnablePlugin {
-        plugin_address: Addr,
-    },
-    DisablePlugin {
-        plugin_address: Addr,
-    },
     PyxisExecuteMsg(PyxisExecuteMsg),
 }
 

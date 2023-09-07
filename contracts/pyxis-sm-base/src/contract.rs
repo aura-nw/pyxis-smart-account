@@ -1,3 +1,5 @@
+use cosmwasm_std::StdError;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
@@ -5,6 +7,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::state::{Plugin, PLUGINS};
 
 use pyxis_sm::msg::PyxisExecuteMsg;
 
@@ -54,10 +57,8 @@ pub fn execute(
             plugin_address,
             checksum,
             config,
-        } => register_plugin(plugin_address, checksum, config),
-        ExecuteMsg::UnregisterPlugin { plugin_address } => unregister_plugin(plugin_address),
-        ExecuteMsg::EnablePlugin { plugin_address } => enable_plugin(plugin_address),
-        ExecuteMsg::DisablePlugin { plugin_address } => disable_plugin(plugin_address),
+        } => register_plugin(deps, plugin_address, checksum, config),
+        ExecuteMsg::UnregisterPlugin { plugin_address } => unregister_plugin(deps, plugin_address),
     }
 }
 
@@ -71,31 +72,55 @@ pub fn pre_execute(
 }
 
 pub fn after_execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     _msg: PyxisExecuteMsg,
 ) -> Result<Response, ContractError> {
     Ok(Response::default())
 }
-
+/// Register a plugin to this smart account
+/// Only this smart account can register a plugin for itself
 pub fn register_plugin(
+    deps: DepsMut,
     plugin_address: Addr,
     checksum: String,
     config: String,
 ) -> Result<Response, ContractError> {
+    // TODO: check if plugin_address is a valid plugin contract
+
+    // check if this plugin has already been registered
+    // for now we will throw error
+    if PLUGINS.has(deps.storage, &plugin_address) {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Plugin is already registered",
+        )));
+    }
+
+    // add this plugin and its config to the storage
+    PLUGINS.save(
+        deps.storage,
+        &plugin_address.clone(),
+        &Plugin {
+            contract_address: plugin_address,
+            checksum,
+            status: false,
+            config,
+        },
+    )?;
+
+    // TODO: call plugin's register hook
+
     Ok(Response::default())
 }
 
-pub fn unregister_plugin(plugin_address: Addr) -> Result<Response, ContractError> {
-    Ok(Response::default())
-}
+/// Unregister a plugin from this smart account
+/// Only this smart account can unregister a plugin of itself
+pub fn unregister_plugin(deps: DepsMut, plugin_address: Addr) -> Result<Response, ContractError> {
+    // just remove the plugin from the storage
+    PLUGINS.remove(deps.storage, &plugin_address);
 
-pub fn enable_plugin(plugin_address: Addr) -> Result<Response, ContractError> {
-    Ok(Response::default())
-}
-
-pub fn disable_plugin(plugin_address: Addr) -> Result<Response, ContractError> {
+    // TODO: call plugin's unregister hook
     Ok(Response::default())
 }
 
