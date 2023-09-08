@@ -1,4 +1,5 @@
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Addr;
 
 #[cw_serde]
 pub struct CallInfo {
@@ -21,4 +22,10 @@ pub enum PyxisExecuteMsg {
         funds: Vec<cosmwasm_std::Coin>,
         call_info: CallInfo,
     },
+}
+
+#[cw_serde]
+pub enum PyxisPluginExecuteMsg {
+    Register { address: Addr, config: String },
+    Unregister { address: Addr },
 }

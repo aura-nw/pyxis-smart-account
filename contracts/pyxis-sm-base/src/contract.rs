@@ -1,15 +1,19 @@
-use cosmwasm_std::StdError;
+use std::vec;
+
+use cosmwasm_std::{CosmosMsg, StdError};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{
+    coins, wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Plugin, PLUGINS};
 
-use pyxis_sm::msg::PyxisExecuteMsg;
+use pyxis_sm::msg::{PyxisExecuteMsg, PyxisPluginExecuteMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
@@ -48,6 +52,11 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    // check if this is called by this contract itself
+    if info.sender != env.contract.address {
+        return Err(ContractError::Std(StdError::generic_err("Unauthorized")));
+    }
+
     match msg {
         ExecuteMsg::PyxisExecuteMsg(pyxis_msg) => match pyxis_msg {
             PyxisExecuteMsg::PreExecute { .. } => Ok(Response::default()),
@@ -57,8 +66,10 @@ pub fn execute(
             plugin_address,
             checksum,
             config,
-        } => register_plugin(deps, plugin_address, checksum, config),
-        ExecuteMsg::UnregisterPlugin { plugin_address } => unregister_plugin(deps, plugin_address),
+        } => register_plugin(deps, env, info, plugin_address, checksum, config),
+        ExecuteMsg::UnregisterPlugin { plugin_address } => {
+            unregister_plugin(deps, env, info, plugin_address)
+        }
     }
 }
 
@@ -72,22 +83,25 @@ pub fn pre_execute(
 }
 
 pub fn after_execute(
-    deps: DepsMut,
+    _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     _msg: PyxisExecuteMsg,
 ) -> Result<Response, ContractError> {
     Ok(Response::default())
 }
+
 /// Register a plugin to this smart account
 /// Only this smart account can register a plugin for itself
 pub fn register_plugin(
     deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
     plugin_address: Addr,
     checksum: String,
     config: String,
 ) -> Result<Response, ContractError> {
-    // TODO: check if plugin_address is a valid plugin contract
+    // TODO: check if plugin_address is a valid plugin contract with the same checksum
 
     // check if this plugin has already been registered
     // for now we will throw error
@@ -102,26 +116,46 @@ pub fn register_plugin(
         deps.storage,
         &plugin_address.clone(),
         &Plugin {
-            contract_address: plugin_address,
+            contract_address: plugin_address.clone(),
             checksum,
             status: false,
-            config,
+            config: config.clone(),
         },
     )?;
 
-    // TODO: call plugin's register hook
+    let register_msg = CosmosMsg::Wasm(wasm_execute(
+        plugin_address.as_str(),
+        &PyxisPluginExecuteMsg::Register {
+            address: info.sender,
+            config,
+        },
+        vec![],
+    )?);
 
-    Ok(Response::default())
+    Ok(Response::new().add_message(register_msg))
 }
 
 /// Unregister a plugin from this smart account
 /// Only this smart account can unregister a plugin of itself
-pub fn unregister_plugin(deps: DepsMut, plugin_address: Addr) -> Result<Response, ContractError> {
+pub fn unregister_plugin(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    plugin_address: Addr,
+) -> Result<Response, ContractError> {
     // just remove the plugin from the storage
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    // TODO: call plugin's unregister hook
-    Ok(Response::default())
+    // call the unregister message
+    let unregister_msg = CosmosMsg::Wasm(wasm_execute(
+        plugin_address.as_str(),
+        &PyxisPluginExecuteMsg::Unregister {
+            address: info.sender,
+        },
+        vec![],
+    )?);
+
+    Ok(Response::new().add_message(unregister_msg))
 }
 
 /// Handling contract query
