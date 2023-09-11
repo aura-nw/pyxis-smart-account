@@ -5,7 +5,7 @@ use cosmwasm_std::{CosmosMsg, StdError};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -125,10 +125,7 @@ pub fn register_plugin(
 
     let register_msg = CosmosMsg::Wasm(wasm_execute(
         plugin_address.as_str(),
-        &PyxisPluginExecuteMsg::Register {
-            address: info.sender,
-            config,
-        },
+        &PyxisPluginExecuteMsg::Register { config },
         vec![],
     )?);
 
@@ -149,9 +146,7 @@ pub fn unregister_plugin(
     // call the unregister message
     let unregister_msg = CosmosMsg::Wasm(wasm_execute(
         plugin_address.as_str(),
-        &PyxisPluginExecuteMsg::Unregister {
-            address: info.sender,
-        },
+        &PyxisPluginExecuteMsg::Unregister {},
         vec![],
     )?);
 

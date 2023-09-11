@@ -26,6 +26,8 @@ pub enum PyxisExecuteMsg {
 
 #[cw_serde]
 pub enum PyxisPluginExecuteMsg {
-    Register { address: Addr, config: String },
-    Unregister { address: Addr },
+    /// Register a plugin to this smart account, the caller must be the smart account itself
+    Register { config: String },
+    /// Unregister a plugin from this smart account, the caller must be the smart account itself
+    Unregister {},
 }
