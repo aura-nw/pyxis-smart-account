@@ -53,3 +53,4 @@ pyxis-sm         = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = "0.13.2"
+sample-plugin = { path = "../sample-plugin" }
