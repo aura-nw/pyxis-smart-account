@@ -16,15 +16,15 @@ pub fn sample_plugin_code() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-pub fn mock_app() -> (App, HashMap<String, u64>) {
+pub fn mock_app<'a>() -> (App, HashMap<&'a str, u64>) {
     let mut app = AppBuilder::new().build(|_router, _api, _storage| {});
-    let mut code_ids: HashMap<String, u64> = HashMap::new();
+    let mut code_ids: HashMap<&'a str, u64> = HashMap::new();
 
     let smart_account_code = app.store_code(smart_account_code());
-    code_ids.insert("smart_account".to_string(), smart_account_code);
+    code_ids.insert("smart_account", smart_account_code);
 
     let sample_plugin_code = app.store_code(sample_plugin_code());
-    code_ids.insert("sample_plugin".to_string(), sample_plugin_code);
+    code_ids.insert("sample_plugin", sample_plugin_code);
 
     (app, code_ids)
 }

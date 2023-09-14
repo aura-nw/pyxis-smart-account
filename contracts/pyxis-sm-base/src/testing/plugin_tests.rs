@@ -1,14 +1,44 @@
+use std::collections::HashMap;
 use std::vec;
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::Addr;
-use cw_multi_test::Executor;
+use cw_multi_test::{App, Executor};
 
+use crate::contract::instantiate;
+use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::testing::test_setup::mock_app;
-use crate::{contract::instantiate, msg::InstantiateMsg};
+use pyxis_sm::msg::{PyxisExecuteMsg, PyxisPluginExecuteMsg};
 use sample_plugin::msg::InstantiateMsg as PluginInstantiateMsg;
 
-const SM_ADDRESS: &str = "smart_account_1";
+// since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
+const SM_ADDRESS: &str = "contract0";
+
+fn setup_contracts(app: &mut App, code_ids: &HashMap<&str, u64>) -> (Addr, Addr) {
+    let smart_account_addr = app.instantiate_contract(
+        *code_ids.get("smart_account").unwrap(),
+        Addr::unchecked(SM_ADDRESS),
+        &InstantiateMsg {},
+        &vec![],
+        "smart account 1",
+        Some(SM_ADDRESS.to_string()),
+    );
+    println!("smart_account_addr: {:?}", smart_account_addr);
+    assert!(smart_account_addr.is_ok());
+
+    let plugin_addr = app.instantiate_contract(
+        *code_ids.get("sample_plugin").unwrap(),
+        Addr::unchecked(SM_ADDRESS),
+        &PluginInstantiateMsg {},
+        &vec![],
+        "sample plugin 1",
+        Some(SM_ADDRESS.to_string()),
+    );
+    println!("plugin_addr: {:?}", plugin_addr);
+    assert!(plugin_addr.is_ok());
+
+    (smart_account_addr.unwrap(), plugin_addr.unwrap())
+}
 
 #[test]
 fn proper_instantiation() {
@@ -24,23 +54,51 @@ fn proper_instantiation() {
 fn register_plugin() {
     let (mut app, code_ids) = mock_app();
 
-    let smart_account_addr = app.instantiate_contract(
-        *code_ids.get("smart_account").unwrap(),
-        Addr::unchecked(SM_ADDRESS),
-        &InstantiateMsg {},
-        &vec![],
-        "smart account 1",
-        Some(SM_ADDRESS.to_string()),
-    );
-    assert!(smart_account_addr.is_ok());
+    let (smart_account_addr, plugin_addr) = setup_contracts(&mut app, &code_ids);
 
-    let plugin_addr = app.instantiate_contract(
-        *code_ids.get("sample_plugin").unwrap(),
+    let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
-        &PluginInstantiateMsg {},
+        smart_account_addr,
+        &ExecuteMsg::RegisterPlugin {
+            plugin_address: plugin_addr,
+            config: "config".to_string(),
+            checksum: "checksum".to_string(),
+        },
         &vec![],
-        "sample plugin 1",
-        Some(SM_ADDRESS.to_string()),
     );
-    assert!(plugin_addr.is_ok());
+    println!("response: {:?}", response);
+    assert!(response.is_ok());
+}
+
+#[test]
+fn cannot_register_same_plugin() {
+    let (mut app, code_ids) = mock_app();
+
+    let (smart_account_addr, plugin_addr) = setup_contracts(&mut app, &code_ids);
+
+    let response = app.execute_contract(
+        Addr::unchecked(SM_ADDRESS),
+        smart_account_addr.clone(),
+        &ExecuteMsg::RegisterPlugin {
+            plugin_address: plugin_addr.clone(),
+            config: "config".to_string(),
+            checksum: "checksum".to_string(),
+        },
+        &vec![],
+    );
+    println!("response: {:?}", response);
+    assert!(response.is_ok());
+
+    let response = app.execute_contract(
+        Addr::unchecked(SM_ADDRESS),
+        smart_account_addr,
+        &ExecuteMsg::RegisterPlugin {
+            plugin_address: plugin_addr,
+            config: "config".to_string(),
+            checksum: "checksum".to_string(),
+        },
+        &vec![],
+    );
+    println!("response: {:?}", response);
+    assert!(response.is_err());
 }
