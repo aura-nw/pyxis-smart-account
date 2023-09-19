@@ -18,7 +18,9 @@ fn setup_contracts(app: &mut App, code_ids: &HashMap<&str, u64>) -> (Addr, Vec<A
     let smart_account_addr = app.instantiate_contract(
         *code_ids.get("smart_account").unwrap(),
         Addr::unchecked(SM_ADDRESS),
-        &InstantiateMsg {},
+        &InstantiateMsg {
+            plugin_manager_addr: Addr::unchecked("plugin_manager_addr"),
+        },
         &vec![],
         "smart account 1",
         Some(SM_ADDRESS.to_string()),
@@ -50,7 +52,9 @@ fn setup_contracts(app: &mut App, code_ids: &HashMap<&str, u64>) -> (Addr, Vec<A
 fn proper_instantiation() {
     let mut deps = mock_dependencies();
     let info = mock_info(SM_ADDRESS, &[]);
-    let msg = InstantiateMsg {};
+    let msg = InstantiateMsg {
+        plugin_manager_addr: Addr::unchecked("plugin_manager_addr"),
+    };
     let env = mock_env();
     let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(0, res.messages.len());

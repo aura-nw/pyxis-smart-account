@@ -11,7 +11,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Plugin, PLUGINS};
+use crate::state::{Config, Plugin, CONFIG, PLUGINS};
 
 use pyxis_sm::msg::{PyxisExecuteMsg, PyxisPluginExecuteMsg};
 
@@ -25,9 +25,16 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            plugin_manager_addr: msg.plugin_manager_addr,
+        },
+    )?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -110,6 +117,8 @@ pub fn register_plugin(
             "Plugin is already registered",
         )));
     }
+
+    // call plugin manager to check if this plugin is valid
 
     // add this plugin and its config to the storage
     PLUGINS.save(

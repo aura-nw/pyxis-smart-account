@@ -4,7 +4,9 @@ use pyxis_sm::msg::PyxisExecuteMsg;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    pub plugin_manager_addr: Addr,
+}
 
 /// Message type for `execute` entry_point
 #[cw_serde]
