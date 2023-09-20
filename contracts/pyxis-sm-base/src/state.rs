@@ -9,9 +9,10 @@ pub struct Config {
 
 #[cw_serde]
 pub struct Plugin {
+    pub name: String,
     pub contract_address: Addr,
     pub checksum: String,
-    pub status: bool,
+    pub status: String,
     pub config: String,
 }
 

@@ -7,7 +7,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::PLUGINS;
+use crate::state::{Plugin, PLUGINS};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -55,10 +55,19 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        // Find matched incoming message variant and execute them with your custom logic.
-        //
-        // With `Response` type, it is possible to dispatch message to invoke external logic.
-        // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
+        ExecuteMsg::AllowPlugin { plugin_address } => {
+            // just save it
+            let plugin = Plugin {
+                name: "sample plugin".to_string(),
+                version: "0.1.0".to_string(),
+                code_id: 1,
+                address: plugin_address.clone(),
+                checksum: "checksum".to_string(),
+            };
+            PLUGINS.save(_deps.storage, &plugin_address.to_string(), &plugin)?;
+            Ok(Response::new())
+        }
+        ExecuteMsg::DisallowPlugin { plugin_address } => Ok(Response::new()),
     }
 }
 
@@ -67,11 +76,12 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::PluginInfo { address } => {
+            println!("address: {}", address);
             let plugin = PLUGINS.load(deps.storage, &address)?;
             to_binary(&PluginResponse {
                 name: plugin.name,
                 version: plugin.version,
-                address: plugin.address,
+                address: plugin.address.to_string(),
             })
         } // Find matched incoming message variant and query them your custom logic
           // and then construct your query response with the type usually defined

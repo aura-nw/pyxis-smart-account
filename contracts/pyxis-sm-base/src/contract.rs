@@ -1,11 +1,12 @@
 use std::vec;
 
-use cosmwasm_std::{CosmosMsg, StdError};
+use cosmwasm_std::{to_binary, CosmosMsg, StdError};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
+    StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
 
@@ -14,6 +15,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, Plugin, CONFIG, PLUGINS};
 
 use pyxis_sm::msg::{PyxisExecuteMsg, PyxisPluginExecuteMsg};
+use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg as PMQueryMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
@@ -119,15 +121,28 @@ pub fn register_plugin(
     }
 
     // call plugin manager to check if this plugin is valid
+    // if the request is successful, it means the plugin is valid
+    let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
+    let query_plugin_msg = PMQueryMsg::PluginInfo {
+        address: plugin_address.to_string(),
+    };
+    let plugin_info: PluginResponse =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: plugin_manager_addr.to_string(),
+            msg: to_binary(&query_plugin_msg)?,
+        }))?;
+
+    // TODO: query the contract info of the plugin_address and check if the checksum is the same
 
     // add this plugin and its config to the storage
     PLUGINS.save(
         deps.storage,
         &plugin_address.clone(),
         &Plugin {
+            name: plugin_info.name,
             contract_address: plugin_address.clone(),
             checksum,
-            status: false,
+            status: "active".to_string(),
             config: config.clone(),
         },
     )?;
