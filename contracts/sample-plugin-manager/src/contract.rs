@@ -65,9 +65,18 @@ pub fn execute(
                 checksum: "checksum".to_string(),
             };
             PLUGINS.save(_deps.storage, &plugin_address.to_string(), &plugin)?;
-            Ok(Response::new())
+            Ok(Response::new().add_attributes(vec![
+                ("action", "allow_plugin"),
+                ("plugin_address", plugin_address.to_string().as_str()),
+            ]))
         }
-        ExecuteMsg::DisallowPlugin { plugin_address } => Ok(Response::new()),
+        ExecuteMsg::DisallowPlugin { plugin_address } => {
+            PLUGINS.remove(_deps.storage, &plugin_address.to_string());
+            Ok(Response::new().add_attributes(vec![
+                ("action", "disallow_plugin"),
+                ("plugin_address", plugin_address.to_string().as_str()),
+            ]))
+        }
     }
 }
 
@@ -83,11 +92,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 version: plugin.version,
                 address: plugin.address.to_string(),
             })
-        } // Find matched incoming message variant and query them your custom logic
-          // and then construct your query response with the type usually defined
-          // `msg.rs` alongside with the query message itself.
-          //
-          // use `cosmwasm_std::to_binary` to serialize query response to json binary.
+        }
     }
 }
 

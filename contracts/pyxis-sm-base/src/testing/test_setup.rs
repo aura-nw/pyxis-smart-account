@@ -1,14 +1,24 @@
 use crate::contract::{execute, instantiate, query};
-use cosmwasm_std::Empty;
-use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper};
-use sample_plugin::contract::{
-    execute as plugin_execute, instantiate as plugin_instantiate, query as plugin_query,
+use crate::msg::InstantiateMsg;
+use cosmwasm_std::{Addr, Empty};
+use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
+use sample_plugin::{
+    contract::{
+        execute as plugin_execute, instantiate as plugin_instantiate, query as plugin_query,
+    },
+    msg::InstantiateMsg as PluginInstantiateMsg,
 };
-use sample_plugin_manager::contract::{
-    execute as plugin_manager_execute, instantiate as plugin_manager_instantiate,
-    query as plugin_manager_query,
+use sample_plugin_manager::{
+    contract::{
+        execute as plugin_manager_execute, instantiate as plugin_manager_instantiate,
+        query as plugin_manager_query,
+    },
+    msg::InstantiateMsg as PluginManagerInstantiateMsg,
 };
 use std::collections::HashMap;
+
+// since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
+pub const SM_ADDRESS: &str = "contract1";
 
 pub fn smart_account_code() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(execute, instantiate, query);
@@ -43,4 +53,56 @@ pub fn mock_app<'a>() -> (App, HashMap<&'a str, u64>) {
     code_ids.insert("sample_plugin_manager", sample_plugin_manager_code);
 
     (app, code_ids)
+}
+
+pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> HashMap<String, Addr> {
+    let mut contracts: HashMap<String, Addr> = HashMap::new();
+
+    let plugin_manager_addr = app.instantiate_contract(
+        *code_ids.get("sample_plugin_manager").unwrap(),
+        Addr::unchecked(SM_ADDRESS),
+        &PluginManagerInstantiateMsg {},
+        &vec![],
+        "sample plugin manager 1",
+        Some(SM_ADDRESS.to_string()),
+    );
+    println!("sample plugin manager: {:?}", plugin_manager_addr);
+    assert!(plugin_manager_addr.is_ok());
+
+    let plugin_manager_addr = plugin_manager_addr.unwrap();
+    contracts.insert("plugin_manager".to_string(), plugin_manager_addr.clone());
+
+    let smart_account_addr = app.instantiate_contract(
+        *code_ids.get("smart_account").unwrap(),
+        Addr::unchecked(SM_ADDRESS),
+        &InstantiateMsg {
+            plugin_manager_addr,
+        },
+        &vec![],
+        "smart account 1",
+        Some(SM_ADDRESS.to_string()),
+    );
+    println!("smart_account_addr: {:?}", smart_account_addr);
+    assert!(smart_account_addr.is_ok());
+    contracts.insert("smart_account".to_string(), smart_account_addr.unwrap());
+
+    // loop to create 5 plugins
+    for i in 1..5 {
+        let plugin_addr = app.instantiate_contract(
+            *code_ids.get("sample_plugin").unwrap(),
+            Addr::unchecked(SM_ADDRESS),
+            &PluginInstantiateMsg {},
+            &vec![],
+            "sample plugin 1",
+            Some(SM_ADDRESS.to_string()),
+        );
+        println!("plugin_addr: {:?}", plugin_addr);
+        assert!(plugin_addr.is_ok());
+
+        let plugin_addr = plugin_addr.unwrap();
+        let key = format!("plugin_{}", i);
+        contracts.insert(key, plugin_addr);
+    }
+
+    contracts
 }
