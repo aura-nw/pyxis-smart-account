@@ -132,6 +132,28 @@ pub fn handle_pre_execute(
     }
 }
 
+pub fn handle_after_execute(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    _msgs: Vec<CosmosMsg>,
+    _funds: Vec<Coin>,
+    _call_info: CallInfo,
+) -> Result<Response, ContractError> {
+    // load config of sender
+    let user_config = USER_CONFIGS.load(deps.storage, &info.sender).unwrap();
+
+    match user_config.config.as_str() {
+        "approve" => Ok(Response::new()),
+        "reject" => Err(ContractError::Rejected {
+            reason: "reject".to_string(),
+        }),
+        _ => Err(ContractError::Rejected {
+            reason: "config error".to_string(),
+        }),
+    }
+}
+
 /// Handling contract query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {

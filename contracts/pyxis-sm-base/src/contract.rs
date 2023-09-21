@@ -123,14 +123,35 @@ pub fn pre_execute(
 }
 
 pub fn after_execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: Vec<CosmosMsg>,
-    _funds: Vec<Coin>,
-    _call_info: CallInfo,
+    msg: Vec<CosmosMsg>,
+    funds: Vec<Coin>,
+    call_info: CallInfo,
 ) -> Result<Response, ContractError> {
-    Ok(Response::default())
+    // call the pre_execute message of all the plugins
+    let after_execute_msgs = PLUGINS
+        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .map(|data| data.unwrap())
+        .filter(|(_, plugin)| plugin.status == PluginStatus::Active)
+        .map(|(_, plugin)| {
+            CosmosMsg::Wasm(
+                wasm_execute(
+                    &plugin.contract_address,
+                    &PyxisPluginExecuteMsg::PreExecute {
+                        msgs: msg.clone(),
+                        funds: funds.clone(),
+                        call_info: call_info.clone(),
+                    },
+                    vec![],
+                )
+                .unwrap(),
+            )
+        })
+        .collect::<Vec<CosmosMsg>>();
+
+    Ok(Response::new().add_messages(after_execute_msgs))
 }
 
 /// Register a plugin to this smart account
