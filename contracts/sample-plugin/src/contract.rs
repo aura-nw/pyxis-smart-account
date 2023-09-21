@@ -1,13 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{
+    Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{UserConfig, USER_CONFIGS};
 
-use pyxis_sm::msg::PyxisPluginExecuteMsg;
+use pyxis_sm::msg::{CallInfo, PyxisPluginExecuteMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:sample-plugin";
@@ -56,9 +58,11 @@ pub fn execute(
     match msg {
         PyxisPluginExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         PyxisPluginExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
-        PyxisPluginExecuteMsg::PreExecute { .. } => Err(ContractError::Rejected {
-            reason: "Reject".to_string(),
-        }),
+        PyxisPluginExecuteMsg::PreExecute {
+            msgs,
+            funds,
+            call_info,
+        } => handle_pre_execute(deps, env, info, msgs, funds, call_info),
         PyxisPluginExecuteMsg::AfterExecute { .. } => Ok(Response::new()),
     }
 }
@@ -104,6 +108,28 @@ pub fn handle_unregister(
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     Ok(Response::default())
+}
+
+pub fn handle_pre_execute(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    _msgs: Vec<CosmosMsg>,
+    _funds: Vec<Coin>,
+    _call_info: CallInfo,
+) -> Result<Response, ContractError> {
+    // load config of sender
+    let user_config = USER_CONFIGS.load(deps.storage, &info.sender).unwrap();
+
+    match user_config.config.as_str() {
+        "approve" => Ok(Response::new()),
+        "reject" => Err(ContractError::Rejected {
+            reason: "reject".to_string(),
+        }),
+        _ => Err(ContractError::Rejected {
+            reason: "config error".to_string(),
+        }),
+    }
 }
 
 /// Handling contract query

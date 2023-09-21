@@ -13,7 +13,7 @@ use sample_plugin_manager::{
         execute as plugin_manager_execute, instantiate as plugin_manager_instantiate,
         query as plugin_manager_query,
     },
-    msg::InstantiateMsg as PluginManagerInstantiateMsg,
+    msg::{ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg},
 };
 use std::collections::HashMap;
 
@@ -105,4 +105,18 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
     }
 
     contracts
+}
+
+pub fn allow_plugin(app: &mut App, contracts: &HashMap<String, Addr>, plugin_name: &str) {
+    println!("allowing plugin: {}", contracts.get(plugin_name).unwrap());
+    // allow a plugin to be used by smart account by calling the plugin manager
+    app.execute_contract(
+        Addr::unchecked(SM_ADDRESS),
+        contracts.get("plugin_manager").unwrap().clone(),
+        &PluginManagerExecuteMsg::AllowPlugin {
+            plugin_address: contracts.get(plugin_name).unwrap().clone(),
+        },
+        &vec![],
+    )
+    .unwrap();
 }

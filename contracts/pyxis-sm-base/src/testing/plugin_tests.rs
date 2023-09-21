@@ -7,22 +7,8 @@ use cw_multi_test::{App, Executor};
 
 use crate::contract::instantiate;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
-use crate::testing::test_setup::{mock_app, setup_contracts, SM_ADDRESS};
+use crate::testing::test_setup::{allow_plugin, mock_app, setup_contracts, SM_ADDRESS};
 use sample_plugin_manager::msg::ExecuteMsg as PluginManagerExecuteMsg;
-
-fn allow_plugin(app: &mut App, contracts: &HashMap<String, Addr>, plugin_name: &str) {
-    println!("allowing plugin: {}", contracts.get(plugin_name).unwrap());
-    // allow a plugin to be used by smart account by calling the plugin manager
-    app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
-        contracts.get("plugin_manager").unwrap().clone(),
-        &PluginManagerExecuteMsg::AllowPlugin {
-            plugin_address: contracts.get(plugin_name).unwrap().clone(),
-        },
-        &vec![],
-    )
-    .unwrap();
-}
 
 #[test]
 fn proper_instantiation() {
