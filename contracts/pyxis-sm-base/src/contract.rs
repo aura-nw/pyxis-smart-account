@@ -1,6 +1,6 @@
 use std::vec;
 
-use cosmwasm_std::{to_binary, CosmosMsg, StdError};
+use cosmwasm_std::{to_binary, Coin, CosmosMsg, StdError};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -12,9 +12,9 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, Plugin, CONFIG, PLUGINS};
+use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
-use pyxis_sm::msg::{PyxisExecuteMsg, PyxisPluginExecuteMsg};
+use pyxis_sm::msg::{CallInfo, PyxisExecuteMsg, PyxisPluginExecuteMsg};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg as PMQueryMsg};
 
 // version info for migration info
@@ -68,8 +68,16 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::PyxisExecuteMsg(pyxis_msg) => match pyxis_msg {
-            PyxisExecuteMsg::PreExecute { .. } => Ok(Response::default()),
-            PyxisExecuteMsg::AfterExecute { .. } => Ok(Response::default()),
+            PyxisExecuteMsg::PreExecute {
+                msgs,
+                funds,
+                call_info,
+            } => pre_execute(deps, env, info, msgs, funds, call_info),
+            PyxisExecuteMsg::AfterExecute {
+                msgs,
+                funds,
+                call_info,
+            } => after_execute(deps, env, info, msgs, funds, call_info),
         },
         ExecuteMsg::RegisterPlugin {
             plugin_address,
@@ -83,19 +91,44 @@ pub fn execute(
 }
 
 pub fn pre_execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: PyxisExecuteMsg,
+    msg: Vec<CosmosMsg>,
+    funds: Vec<Coin>,
+    call_info: CallInfo,
 ) -> Result<Response, ContractError> {
-    Ok(Response::default())
+    // call the pre_execute message of all the plugins
+    let pre_execute_msgs = PLUGINS
+        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .map(|data| data.unwrap())
+        .filter(|(_, plugin)| plugin.status == PluginStatus::Active)
+        .map(|(_, plugin)| {
+            CosmosMsg::Wasm(
+                wasm_execute(
+                    &plugin.contract_address,
+                    &PyxisPluginExecuteMsg::PreExecute {
+                        msgs: msg.clone(),
+                        funds: funds.clone(),
+                        call_info: call_info.clone(),
+                    },
+                    vec![],
+                )
+                .unwrap(),
+            )
+        })
+        .collect::<Vec<CosmosMsg>>();
+
+    Ok(Response::new().add_messages(pre_execute_msgs))
 }
 
 pub fn after_execute(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: PyxisExecuteMsg,
+    _msg: Vec<CosmosMsg>,
+    _funds: Vec<Coin>,
+    _call_info: CallInfo,
 ) -> Result<Response, ContractError> {
     Ok(Response::default())
 }
@@ -142,7 +175,7 @@ pub fn register_plugin(
             name: plugin_info.name,
             contract_address: plugin_address.clone(),
             checksum,
-            status: "active".to_string(),
+            status: PluginStatus::Active,
             config: config.clone(),
         },
     )?;

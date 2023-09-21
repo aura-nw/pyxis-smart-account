@@ -56,6 +56,10 @@ pub fn execute(
     match msg {
         PyxisPluginExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         PyxisPluginExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
+        PyxisPluginExecuteMsg::PreExecute { .. } => Err(ContractError::Rejected {
+            reason: "Reject".to_string(),
+        }),
+        PyxisPluginExecuteMsg::AfterExecute { .. } => Ok(Response::new()),
     }
 }
 

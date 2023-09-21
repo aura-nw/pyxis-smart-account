@@ -8,11 +8,17 @@ pub struct Config {
 }
 
 #[cw_serde]
+pub enum PluginStatus {
+    Active,
+    Inactive,
+}
+
+#[cw_serde]
 pub struct Plugin {
     pub name: String,
     pub contract_address: Addr,
     pub checksum: String,
-    pub status: String,
+    pub status: PluginStatus,
     pub config: String,
 }
 

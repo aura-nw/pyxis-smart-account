@@ -30,4 +30,16 @@ pub enum PyxisPluginExecuteMsg {
     Register { config: String },
     /// Unregister a plugin from this smart account, the caller must be the smart account itself
     Unregister {},
+    /// PreExecute is called before a transaction is executed
+    PreExecute {
+        msgs: Vec<cosmwasm_std::CosmosMsg>,
+        funds: Vec<cosmwasm_std::Coin>,
+        call_info: CallInfo,
+    },
+    /// AfterExecute is called at the end of a transaction
+    AfterExecute {
+        msgs: Vec<cosmwasm_std::CosmosMsg>,
+        funds: Vec<cosmwasm_std::Coin>,
+        call_info: CallInfo,
+    },
 }
