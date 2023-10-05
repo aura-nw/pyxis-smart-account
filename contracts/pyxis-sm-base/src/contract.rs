@@ -1,6 +1,6 @@
 use std::vec;
 
-use cosmwasm_std::{to_binary, Coin, CosmosMsg, StdError};
+use cosmwasm_std::{to_binary, CosmosMsg, StdError};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -14,7 +14,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
-use pyxis_sm::msg::{CallInfo, PyxisExecuteMsg, PyxisPluginExecuteMsg};
+use pyxis_sm::msg::{CallInfo, PyxisExecuteMsg, PyxisPluginExecuteMsg, SdkMsg};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg as PMQueryMsg};
 
 // version info for migration info
@@ -68,16 +68,12 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::PyxisExecuteMsg(pyxis_msg) => match pyxis_msg {
-            PyxisExecuteMsg::PreExecute {
-                msgs,
-                funds,
-                call_info,
-            } => pre_execute(deps, env, info, msgs, funds, call_info),
-            PyxisExecuteMsg::AfterExecute {
-                msgs,
-                funds,
-                call_info,
-            } => after_execute(deps, env, info, msgs, funds, call_info),
+            PyxisExecuteMsg::PreExecute { msgs, call_info } => {
+                pre_execute(deps, env, info, msgs, call_info)
+            }
+            PyxisExecuteMsg::AfterExecute { msgs, call_info } => {
+                after_execute(deps, env, info, msgs, call_info)
+            }
         },
         ExecuteMsg::RegisterPlugin {
             plugin_address,
@@ -94,8 +90,7 @@ pub fn pre_execute(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: Vec<CosmosMsg>,
-    funds: Vec<Coin>,
+    msg: Vec<SdkMsg>,
     call_info: CallInfo,
 ) -> Result<Response, ContractError> {
     // call the pre_execute message of all the plugins
@@ -109,7 +104,6 @@ pub fn pre_execute(
                     &plugin.contract_address,
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msg.clone(),
-                        funds: funds.clone(),
                         call_info: call_info.clone(),
                     },
                     vec![],
@@ -126,8 +120,7 @@ pub fn after_execute(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: Vec<CosmosMsg>,
-    funds: Vec<Coin>,
+    msg: Vec<SdkMsg>,
     call_info: CallInfo,
 ) -> Result<Response, ContractError> {
     // call the pre_execute message of all the plugins
@@ -141,7 +134,6 @@ pub fn after_execute(
                     &plugin.contract_address,
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msg.clone(),
-                        funds: funds.clone(),
                         call_info: call_info.clone(),
                     },
                     vec![],
@@ -159,7 +151,7 @@ pub fn after_execute(
 pub fn register_plugin(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     plugin_address: Addr,
     checksum: String,
     config: String,
@@ -214,8 +206,8 @@ pub fn register_plugin(
 /// Only this smart account can unregister a plugin of itself
 pub fn unregister_plugin(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     plugin_address: Addr,
 ) -> Result<Response, ContractError> {
     // just remove the plugin from the storage

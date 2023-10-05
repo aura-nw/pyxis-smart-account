@@ -19,12 +19,7 @@ fn pre_execute_without_plugin() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );
@@ -59,12 +54,7 @@ fn pre_execute_with_a_plugin_always_reject() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );
@@ -99,12 +89,7 @@ fn pre_execute_and_plugin_approve() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );
@@ -153,12 +138,7 @@ fn pre_execute_and_one_plugin_reject() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );
@@ -167,7 +147,7 @@ fn pre_execute_and_one_plugin_reject() {
 }
 
 #[test]
-fn after_execute_without_plugin() {
+fn after_execute_without_plugin_success() {
     let (mut app, code_ids) = mock_app();
 
     let contracts = setup_contracts(&mut app, &code_ids);
@@ -178,12 +158,7 @@ fn after_execute_without_plugin() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::AfterExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );
@@ -218,12 +193,7 @@ fn after_execute_and_plugin_reject() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::AfterExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );
@@ -258,12 +228,7 @@ fn after_execute_and_plugin_approve() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::AfterExecute {
             msgs: vec![],
-            funds: vec![],
-            call_info: CallInfo {
-                fee: 0,
-                gas_price: 0,
-                gas_limit: 0,
-            },
+            call_info: CallInfo::default(),
         }),
         &vec![],
     );

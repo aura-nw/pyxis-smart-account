@@ -1,15 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-};
+use cosmwasm_std::{Binary, Coin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{UserConfig, USER_CONFIGS};
 
-use pyxis_sm::msg::{CallInfo, PyxisPluginExecuteMsg};
+use pyxis_sm::msg::{CallInfo, PyxisPluginExecuteMsg, SdkMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:sample-plugin";
@@ -58,11 +56,9 @@ pub fn execute(
     match msg {
         PyxisPluginExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         PyxisPluginExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
-        PyxisPluginExecuteMsg::PreExecute {
-            msgs,
-            funds,
-            call_info,
-        } => handle_pre_execute(deps, env, info, msgs, funds, call_info),
+        PyxisPluginExecuteMsg::PreExecute { msgs, call_info } => {
+            handle_pre_execute(deps, env, info, msgs, call_info)
+        }
         PyxisPluginExecuteMsg::AfterExecute { .. } => Ok(Response::new()),
     }
 }
@@ -103,9 +99,9 @@ pub fn handle_register(
 /// Handling unregister message
 /// This is just a sample implementation.
 pub fn handle_unregister(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
 ) -> Result<Response, ContractError> {
     Ok(Response::default())
 }
@@ -114,8 +110,7 @@ pub fn handle_pre_execute(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msgs: Vec<CosmosMsg>,
-    _funds: Vec<Coin>,
+    _msgs: Vec<SdkMsg>,
     _call_info: CallInfo,
 ) -> Result<Response, ContractError> {
     // load config of sender
@@ -136,8 +131,7 @@ pub fn handle_after_execute(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msgs: Vec<CosmosMsg>,
-    _funds: Vec<Coin>,
+    _msgs: Vec<SdkMsg>,
     _call_info: CallInfo,
 ) -> Result<Response, ContractError> {
     // load config of sender
