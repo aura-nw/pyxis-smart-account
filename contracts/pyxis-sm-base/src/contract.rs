@@ -35,6 +35,7 @@ pub fn instantiate(
         deps.storage,
         &Config {
             plugin_manager_addr: msg.plugin_manager_addr,
+            recoverable: false,
         },
     )?;
 
@@ -74,6 +75,11 @@ pub fn execute(
             PyxisExecuteMsg::AfterExecute { msgs, call_info } => {
                 after_execute(deps, env, info, msgs, call_info)
             }
+            PyxisExecuteMsg::Recover {
+                caller,
+                pubkey,
+                credentials,
+            } => handle_recover(deps, env, info, caller, pubkey, credentials),
         },
         ExecuteMsg::RegisterPlugin {
             plugin_address,
@@ -146,6 +152,29 @@ pub fn after_execute(
     Ok(Response::new().add_messages(after_execute_msgs))
 }
 
+pub fn handle_recover(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    _caller: String,
+    _pubkey: Vec<u8>,
+    _credentials: Vec<u8>,
+) -> Result<Response, ContractError> {
+    // recover is only enabled after a recovery plugin is registered
+    // we also limit the recovery plugin to only one
+    // load config to check if recoverable is enabled
+    let config = CONFIG.load(deps.storage)?;
+    if !config.recoverable {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Recovery is not enabled",
+        )));
+    }
+
+    // the recovery plugin should have been called by the pre_execute message
+    // so we don't need to verify anything here
+    Ok(Response::new())
+}
+
 /// Register a plugin to this smart account
 /// Only this smart account can register a plugin for itself
 pub fn register_plugin(
@@ -186,6 +215,7 @@ pub fn register_plugin(
         &plugin_address.clone(),
         &Plugin {
             name: plugin_info.name,
+            plugin_type: plugin_info.plugin_type,
             contract_address: plugin_address.clone(),
             checksum,
             status: PluginStatus::Active,

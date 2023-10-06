@@ -55,10 +55,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::AllowPlugin { plugin_address } => {
+        ExecuteMsg::AllowPlugin {
+            plugin_address,
+            plugin_type,
+        } => {
             // just save it
             let plugin = Plugin {
                 name: "sample plugin".to_string(),
+                plugin_type: plugin_type,
                 version: "0.1.0".to_string(),
                 code_id: 1,
                 address: plugin_address.clone(),
@@ -89,6 +93,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let plugin = PLUGINS.load(deps.storage, &address)?;
             to_binary(&PluginResponse {
                 name: plugin.name,
+                plugin_type: plugin.plugin_type,
                 version: plugin.version,
                 address: plugin.address.to_string(),
             })

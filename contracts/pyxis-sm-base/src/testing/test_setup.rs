@@ -2,6 +2,7 @@ use crate::contract::{execute, instantiate, query};
 use crate::msg::InstantiateMsg;
 use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
+use pyxis_sm::plugin_manager_msg::PluginType;
 use sample_plugin::{
     contract::{
         execute as plugin_execute, instantiate as plugin_instantiate, query as plugin_query,
@@ -107,7 +108,12 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
     contracts
 }
 
-pub fn allow_plugin(app: &mut App, contracts: &HashMap<String, Addr>, plugin_name: &str) {
+pub fn allow_plugin(
+    app: &mut App,
+    contracts: &HashMap<String, Addr>,
+    plugin_name: &str,
+    plugin_type: PluginType,
+) {
     println!("allowing plugin: {}", contracts.get(plugin_name).unwrap());
     // allow a plugin to be used by smart account by calling the plugin manager
     app.execute_contract(
@@ -115,6 +121,7 @@ pub fn allow_plugin(app: &mut App, contracts: &HashMap<String, Addr>, plugin_nam
         contracts.get("plugin_manager").unwrap().clone(),
         &PluginManagerExecuteMsg::AllowPlugin {
             plugin_address: contracts.get(plugin_name).unwrap().clone(),
+            plugin_type,
         },
         &vec![],
     )

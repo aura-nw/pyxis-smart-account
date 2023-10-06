@@ -1,14 +1,13 @@
-use std::collections::HashMap;
 use std::vec;
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::Addr;
 use cw_multi_test::{App, Executor};
+use pyxis_sm::plugin_manager_msg::PluginType;
 
 use crate::contract::instantiate;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::testing::test_setup::{allow_plugin, mock_app, setup_contracts, SM_ADDRESS};
-use sample_plugin_manager::msg::ExecuteMsg as PluginManagerExecuteMsg;
 
 #[test]
 fn proper_instantiation() {
@@ -48,7 +47,7 @@ fn register_plugin() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1");
+    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
 
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
@@ -70,7 +69,7 @@ fn cannot_register_same_plugin() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1");
+    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
 
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
@@ -105,8 +104,8 @@ fn can_register_two_plugins() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1");
-    allow_plugin(&mut app, &contracts, "plugin_2");
+    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, "plugin_2", PluginType::Other);
 
     app.execute_contract(
         Addr::unchecked(SM_ADDRESS),

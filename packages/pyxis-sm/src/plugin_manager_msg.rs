@@ -9,8 +9,15 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
+pub enum PluginType {
+    Recovery,
+    Other,
+}
+
+#[cw_serde]
 pub struct PluginResponse {
     pub name: String,
+    pub plugin_type: PluginType,
     pub version: String,
     pub address: String,
 }

@@ -39,6 +39,12 @@ pub enum PyxisExecuteMsg {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
     },
+    // recover is a base message which is called when a smart account is recovered (change owner)
+    Recover {
+        caller: String,
+        pubkey: Vec<u8>,
+        credentials: Vec<u8>,
+    },
 }
 
 #[cw_serde]
