@@ -64,3 +64,16 @@ pub enum PyxisPluginExecuteMsg {
         call_info: CallInfo,
     },
 }
+
+#[cw_serde]
+pub enum PyxisRecoveryPluginExecuteMsg {
+    Register {
+        config: String,
+    },
+    Unregister {},
+    Recover {
+        caller: String,
+        pubkey: Vec<u8>,
+        credentials: Vec<u8>,
+    },
+}

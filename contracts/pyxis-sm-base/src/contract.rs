@@ -14,8 +14,10 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
-use pyxis_sm::msg::{CallInfo, PyxisExecuteMsg, PyxisPluginExecuteMsg, SdkMsg};
-use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg as PMQueryMsg};
+use pyxis_sm::msg::{
+    CallInfo, PyxisExecuteMsg, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, SdkMsg,
+};
+use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQueryMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
@@ -92,6 +94,9 @@ pub fn execute(
     }
 }
 
+/// pre_execute is called for every message before it is executed
+/// it will call the pre_execute message of all the plugins except the recovery plugin
+/// if any of the plugin returns an error, the whole transaction will be rejected
 pub fn pre_execute(
     deps: DepsMut,
     _env: Env,
@@ -103,7 +108,9 @@ pub fn pre_execute(
     let pre_execute_msgs = PLUGINS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
-        .filter(|(_, plugin)| plugin.status == PluginStatus::Active)
+        .filter(|(_, plugin)| {
+            plugin.status == PluginStatus::Active && plugin.plugin_type != PluginType::Recovery
+        })
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
                 wasm_execute(
@@ -122,6 +129,9 @@ pub fn pre_execute(
     Ok(Response::new().add_messages(pre_execute_msgs))
 }
 
+/// after_execute is called for every message after it is executed
+/// it will call the after_execute message of all the plugins except the recovery plugin
+/// if any of the plugin returns an error, the whole transaction will be rejected
 pub fn after_execute(
     deps: DepsMut,
     _env: Env,
@@ -133,7 +143,9 @@ pub fn after_execute(
     let after_execute_msgs = PLUGINS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
-        .filter(|(_, plugin)| plugin.status == PluginStatus::Active)
+        .filter(|(_, plugin)| {
+            plugin.status == PluginStatus::Active && plugin.plugin_type != PluginType::Recovery
+        })
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
                 wasm_execute(
@@ -152,13 +164,17 @@ pub fn after_execute(
     Ok(Response::new().add_messages(after_execute_msgs))
 }
 
+/// handle_recover is called when a smart account is recovered (change owner)
+/// it will call the recover message of the recovery plugin
+/// if the recovery plugin returns an error, the whole transaction will be rejected
+/// if there is no recovery plugin, the transaction will be rejected
 pub fn handle_recover(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _caller: String,
-    _pubkey: Vec<u8>,
-    _credentials: Vec<u8>,
+    caller: String,
+    pubkey: Vec<u8>,
+    credentials: Vec<u8>,
 ) -> Result<Response, ContractError> {
     // recover is only enabled after a recovery plugin is registered
     // we also limit the recovery plugin to only one
@@ -170,9 +186,36 @@ pub fn handle_recover(
         )));
     }
 
-    // the recovery plugin should have been called by the pre_execute message
-    // so we don't need to verify anything here
-    Ok(Response::new())
+    // we will loop through every plugin to find the recovery plugin
+    // and pass the recover message to it
+    let recover_msgs = PLUGINS
+        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .map(|data| data.unwrap())
+        .filter(|(_, plugin)| {
+            plugin.status == PluginStatus::Active && plugin.plugin_type == PluginType::Recovery
+        })
+        .map(|(_, plugin)| {
+            CosmosMsg::Wasm(
+                wasm_execute(
+                    &plugin.contract_address,
+                    &PyxisRecoveryPluginExecuteMsg::Recover {
+                        caller: caller.clone(),
+                        pubkey: pubkey.clone(),
+                        credentials: credentials.clone(),
+                    },
+                    vec![],
+                )
+                .unwrap(),
+            )
+        })
+        .collect::<Vec<CosmosMsg>>();
+
+    assert!(
+        recover_msgs.len() == 1,
+        "There should be only one recovery plugin"
+    );
+
+    Ok(Response::new().add_messages(recover_msgs))
 }
 
 /// Register a plugin to this smart account
@@ -185,8 +228,6 @@ pub fn register_plugin(
     checksum: String,
     config: String,
 ) -> Result<Response, ContractError> {
-    // TODO: check if plugin_address is a valid plugin contract with the same checksum
-
     // check if this plugin has already been registered
     // for now we will throw error
     if PLUGINS.has(deps.storage, &plugin_address) {
@@ -215,13 +256,28 @@ pub fn register_plugin(
         &plugin_address.clone(),
         &Plugin {
             name: plugin_info.name,
-            plugin_type: plugin_info.plugin_type,
+            plugin_type: plugin_info.plugin_type.clone(),
             contract_address: plugin_address.clone(),
             checksum,
             status: PluginStatus::Active,
             config: config.clone(),
         },
     )?;
+
+    // TODO: may allow multiple recovery plugins in the future
+    // if plugin type is recovery and recoverable is false, enable recoverable
+    // otherwise, throw an error
+    if plugin_info.plugin_type == PluginType::Recovery {
+        let mut config = CONFIG.load(deps.storage)?;
+        if !config.recoverable {
+            config.recoverable = true;
+            CONFIG.save(deps.storage, &config)?;
+        } else {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Recovery plugin is already registered",
+            )));
+        }
+    }
 
     let register_msg = CosmosMsg::Wasm(wasm_execute(
         plugin_address.as_str(),
@@ -240,10 +296,20 @@ pub fn unregister_plugin(
     _info: MessageInfo,
     plugin_address: Addr,
 ) -> Result<Response, ContractError> {
-    // just remove the plugin from the storage
+    let plugin = PLUGINS.load(deps.storage, &plugin_address)?;
+
+    // if the plugin is a recovery plugin, disable recoverable
+    if plugin.plugin_type == PluginType::Recovery {
+        let mut config = CONFIG.load(deps.storage)?;
+        if config.recoverable {
+            config.recoverable = false;
+            CONFIG.save(deps.storage, &config)?;
+        }
+    }
+
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    // call the unregister message
+    // call unregister in the plugin contract
     let unregister_msg = CosmosMsg::Wasm(wasm_execute(
         plugin_address.as_str(),
         &PyxisPluginExecuteMsg::Unregister {},
