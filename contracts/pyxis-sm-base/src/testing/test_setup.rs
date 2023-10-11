@@ -16,6 +16,10 @@ use sample_plugin_manager::{
     },
     msg::{ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg},
 };
+use simple_recovery_plugin::contract::{
+    execute as recovery_plugin_execute, instantiate as recovery_plugin_instantiate,
+    query as recovery_plugin_query,
+};
 use std::collections::HashMap;
 
 // since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
@@ -28,6 +32,15 @@ pub fn smart_account_code() -> Box<dyn Contract<Empty>> {
 
 pub fn sample_plugin_code() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(plugin_execute, plugin_instantiate, plugin_query);
+    Box::new(contract)
+}
+
+pub fn recovery_plugin_code() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        recovery_plugin_execute,
+        recovery_plugin_instantiate,
+        recovery_plugin_query,
+    );
     Box::new(contract)
 }
 
@@ -49,6 +62,9 @@ pub fn mock_app<'a>() -> (App, HashMap<&'a str, u64>) {
 
     let sample_plugin_code = app.store_code(sample_plugin_code());
     code_ids.insert("sample_plugin", sample_plugin_code);
+
+    let recovery_plugin_code = app.store_code(recovery_plugin_code());
+    code_ids.insert("recovery_plugin", recovery_plugin_code);
 
     let sample_plugin_manager_code = app.store_code(sample_plugin_manager_code());
     code_ids.insert("sample_plugin_manager", sample_plugin_manager_code);
@@ -104,6 +120,17 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
         let key = format!("plugin_{}", i);
         contracts.insert(key, plugin_addr);
     }
+
+    // create a recovery plugin
+    let recovery_plugin_addr = app.instantiate_contract(
+        *code_ids.get("recovery_plugin").unwrap(),
+        Addr::unchecked(SM_ADDRESS),
+        &PluginInstantiateMsg {},
+        &vec![],
+        "recovery plugin",
+        Some(SM_ADDRESS.to_string()),
+    );
+    contracts.insert("recovery_plugin".to_string(), recovery_plugin_addr.unwrap());
 
     contracts
 }

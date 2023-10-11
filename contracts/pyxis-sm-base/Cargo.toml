@@ -52,6 +52,8 @@ thiserror        = { workspace = true }
 pyxis-sm         = { workspace = true }
 
 [dev-dependencies]
-cw-multi-test         = "0.13.2"
-sample-plugin         = { path = "../sample-plugin" }
-sample-plugin-manager = { path = "../sample-plugin-manager" }
+cw-multi-test          = "0.13.2"
+sample-plugin          = { path = "../sample-plugin" }
+sample-plugin-manager  = { path = "../sample-plugin-manager" }
+simple-recovery-plugin = { path = "../simple-recovery-plugin" }
+serde-json-wasm        = "1.0.0"
