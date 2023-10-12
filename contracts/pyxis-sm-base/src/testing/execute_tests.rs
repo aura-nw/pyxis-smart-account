@@ -2,7 +2,7 @@ use std::vec;
 
 use cosmwasm_std::Addr;
 use cw_multi_test::Executor;
-use pyxis_sm::msg::CallInfo;
+use pyxis_sm::msg::{CallInfo, PyxisSudoMsg};
 use pyxis_sm::plugin_manager_msg::PluginType;
 
 use crate::msg::ExecuteMsg;
@@ -18,10 +18,10 @@ fn pre_execute_without_plugin() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
+        &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);
@@ -53,10 +53,10 @@ fn pre_execute_with_a_plugin_always_reject() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
+        &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);
@@ -88,10 +88,10 @@ fn pre_execute_and_plugin_approve() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
+        &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);
@@ -137,10 +137,10 @@ fn pre_execute_and_one_plugin_reject() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::PreExecute {
+        &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);
@@ -157,10 +157,10 @@ fn after_execute_without_plugin_success() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::AfterExecute {
+        &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);
@@ -192,10 +192,10 @@ fn after_execute_and_plugin_reject() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::AfterExecute {
+        &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);
@@ -227,10 +227,10 @@ fn after_execute_and_plugin_approve() {
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
-        &ExecuteMsg::PyxisExecuteMsg(pyxis_sm::msg::PyxisExecuteMsg::AfterExecute {
+        &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-        }),
+        },
         &vec![],
     );
     println!("response: {:?}", response);

@@ -28,7 +28,7 @@ pub struct SdkMsg {
 }
 
 #[cw_serde]
-pub enum PyxisExecuteMsg {
+pub enum PyxisSudoMsg {
     // pre_execute is a base message which is called before any other message
     PreExecute {
         msgs: Vec<SdkMsg>,

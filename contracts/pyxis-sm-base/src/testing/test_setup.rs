@@ -1,4 +1,4 @@
-use crate::contract::{execute, instantiate, query};
+use crate::contract::{execute, instantiate, query, sudo as sudo_fn};
 use crate::msg::InstantiateMsg;
 use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
@@ -26,7 +26,7 @@ use std::collections::HashMap;
 pub const SM_ADDRESS: &str = "contract1";
 
 pub fn smart_account_code() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(execute, instantiate, query);
+    let contract = ContractWrapper::new(execute, instantiate, query).with_sudo(sudo_fn);
     Box::new(contract)
 }
 

@@ -15,7 +15,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
 use pyxis_sm::msg::{
-    CallInfo, PyxisExecuteMsg, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, SdkMsg,
+    CallInfo, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, PyxisSudoMsg, SdkMsg,
 };
 use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQueryMsg};
 
@@ -70,19 +70,6 @@ pub fn execute(
     }
 
     match msg {
-        ExecuteMsg::PyxisExecuteMsg(pyxis_msg) => match pyxis_msg {
-            PyxisExecuteMsg::PreExecute { msgs, call_info } => {
-                pre_execute(deps, env, info, msgs, call_info)
-            }
-            PyxisExecuteMsg::AfterExecute { msgs, call_info } => {
-                after_execute(deps, env, info, msgs, call_info)
-            }
-            PyxisExecuteMsg::Recover {
-                caller,
-                pubkey,
-                credentials,
-            } => handle_recover(deps, env, info, caller, pubkey, credentials),
-        },
         ExecuteMsg::RegisterPlugin {
             plugin_address,
             checksum,
@@ -94,13 +81,25 @@ pub fn execute(
     }
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn sudo(deps: DepsMut, env: Env, msg: PyxisSudoMsg) -> Result<Response, ContractError> {
+    match msg {
+        PyxisSudoMsg::PreExecute { msgs, call_info } => pre_execute(deps, env, msgs, call_info),
+        PyxisSudoMsg::AfterExecute { msgs, call_info } => after_execute(deps, env, msgs, call_info),
+        PyxisSudoMsg::Recover {
+            caller,
+            pubkey,
+            credentials,
+        } => handle_recover(deps, env, caller, pubkey, credentials),
+    }
+}
+
 /// pre_execute is called for every message before it is executed
 /// it will call the pre_execute message of all the plugins except the recovery plugin
 /// if any of the plugin returns an error, the whole transaction will be rejected
 pub fn pre_execute(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
     msg: Vec<SdkMsg>,
     call_info: CallInfo,
 ) -> Result<Response, ContractError> {
@@ -135,7 +134,6 @@ pub fn pre_execute(
 pub fn after_execute(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
     msg: Vec<SdkMsg>,
     call_info: CallInfo,
 ) -> Result<Response, ContractError> {
@@ -171,7 +169,6 @@ pub fn after_execute(
 pub fn handle_recover(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
     caller: String,
     pubkey: Vec<u8>,
     credentials: Vec<u8>,
