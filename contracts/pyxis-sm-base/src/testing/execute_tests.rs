@@ -15,14 +15,12 @@ fn pre_execute_without_plugin() {
     let contracts = setup_contracts(&mut app, &code_ids);
 
     // execute smart account without a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_ok());
@@ -50,14 +48,12 @@ fn pre_execute_with_a_plugin_always_reject() {
     .unwrap();
 
     // execute smart account with a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_err());
@@ -85,14 +81,12 @@ fn pre_execute_and_plugin_approve() {
     .unwrap();
 
     // execute smart account with a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_ok());
@@ -134,14 +128,12 @@ fn pre_execute_and_one_plugin_reject() {
     .unwrap();
 
     // execute smart account with a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_err());
@@ -154,14 +146,12 @@ fn after_execute_without_plugin_success() {
     let contracts = setup_contracts(&mut app, &code_ids);
 
     // execute smart account without a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_ok());
@@ -189,14 +179,12 @@ fn after_execute_and_plugin_reject() {
     .unwrap();
 
     // execute smart account with a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_err());
@@ -224,14 +212,12 @@ fn after_execute_and_plugin_approve() {
     .unwrap();
 
     // execute smart account with a plugin
-    let response = app.execute_contract(
-        Addr::unchecked(SM_ADDRESS),
+    let response = app.wasm_sudo(
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
         },
-        &vec![],
     );
     println!("response: {:?}", response);
     assert!(response.is_ok());

@@ -1,6 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use pyxis_sm::msg::PyxisSudoMsg;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
