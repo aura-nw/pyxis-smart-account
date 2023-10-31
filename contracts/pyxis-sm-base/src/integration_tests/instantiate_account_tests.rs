@@ -10,6 +10,10 @@ use std::option::Option::None;
 use test_tube::runner::result::RunnerExecuteResult;
 use test_tube::{Account, Module, Runner, SigningAccount};
 
+use crate::integration_tests::test_setup::setup_contracts;
+
+use super::test_setup::mock_app;
+
 fn get_account_balances(app: &AuraTestApp, address: String, denom: &str) -> u128 {
     let acc_balance = app
         .query::<QueryAllBalancesRequest, QueryAllBalancesResponse>(
@@ -53,6 +57,12 @@ struct EmptyInit {}
 #[cw_serde]
 struct Listen {
     listen: EmptyInit,
+}
+
+#[test]
+fn test_deploy() {
+    let (mut app, deployer, code_ids) = mock_app();
+    setup_contracts(&mut app, &deployer, &code_ids);
 }
 
 #[test]

@@ -25,7 +25,7 @@ use test_tube::{Module, SigningAccount};
 
 // since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
 pub const SM_ADDRESS: &str = "contract1";
-pub const ROOT_PATH: &str = "../../../";
+pub const ROOT_PATH: &str = "artifacts";
 
 pub fn smart_account_code() -> Vec<u8> {
     std::fs::read(format!("{}/pyxis_sm_base.wasm", ROOT_PATH)).unwrap()
@@ -46,6 +46,8 @@ pub fn sample_plugin_manager_code() -> Vec<u8> {
 pub fn mock_app<'a>() -> (AuraTestApp, SigningAccount, HashMap<&'a str, u64>) {
     let app = AuraTestApp::default();
     let wasm = Wasm::new(&app);
+
+    println!("current directory: {:?}", std::env::current_dir().unwrap());
 
     let deployer = app
         .init_base_account(&coins(100_000_000_000, "uaura"))
@@ -81,6 +83,8 @@ pub fn mock_app<'a>() -> (AuraTestApp, SigningAccount, HashMap<&'a str, u64>) {
         .code_id;
     code_ids.insert("sample_plugin_manager", sample_plugin_manager_code_id);
 
+    println!("code_ids: {:?}", code_ids);
+
     (app, deployer, code_ids)
 }
 
@@ -107,9 +111,8 @@ pub fn setup_contracts<'a>(
         "sample plugin manager: {:?}",
         instantiate_plugin_manager_res
     );
-    assert!(instantiate_plugin_manager_res.is_ok());
 
-    let plugin_manager_addr = instantiate_plugin_manager_res.addr;
+    let plugin_manager_addr = Addr::unchecked(instantiate_plugin_manager_res.data.address);
     contracts.insert("plugin_manager".to_string(), plugin_manager_addr.clone());
 
     let instantiate_sm_res = wasm
@@ -124,13 +127,15 @@ pub fn setup_contracts<'a>(
             deployer,
         )
         .unwrap();
-    println!("smart_account_addr: {:?}", smart_account_addr);
-    assert!(smart_account_addr.is_ok());
-    contracts.insert("smart_account".to_string(), smart_account_addr);
+    println!("smart_account_addr: {:?}", instantiate_sm_res);
+    contracts.insert(
+        "smart_account".to_string(),
+        Addr::unchecked(instantiate_sm_res.data.address),
+    );
 
     // loop to create 5 plugins
     for i in 1..5 {
-        let plugin_addr = wasm
+        let response = wasm
             .instantiate(
                 *code_ids.get("sample_plugin").unwrap(),
                 &PluginInstantiateMsg {},
@@ -140,16 +145,14 @@ pub fn setup_contracts<'a>(
                 deployer,
             )
             .unwrap();
-        println!("plugin_addr: {:?}", plugin_addr);
-        assert!(plugin_addr.is_ok());
+        println!("plugin_addr: {:?}", response.data.address);
 
-        let plugin_addr = plugin_addr.unwrap();
         let key = format!("plugin_{}", i);
-        contracts.insert(key, plugin_addr);
+        contracts.insert(key, Addr::unchecked(response.data.address));
     }
 
     // create a recovery plugin
-    let recovery_plugin_addr = wasm
+    let recovery_plugin_res = wasm
         .instantiate(
             *code_ids.get("recovery_plugin").unwrap(),
             &PluginInstantiateMsg {},
@@ -159,13 +162,16 @@ pub fn setup_contracts<'a>(
             deployer,
         )
         .unwrap();
-    contracts.insert("recovery_plugin".to_string(), recovery_plugin_addr.unwrap());
+    contracts.insert(
+        "recovery_plugin".to_string(),
+        Addr::unchecked(recovery_plugin_res.data.address),
+    );
 
     contracts
 }
 
 pub fn allow_plugin(
-    app: &mut App,
+    app: &mut AuraTestApp,
     deployer: &SigningAccount,
     contracts: &HashMap<String, Addr>,
     plugin_name: &str,
@@ -175,7 +181,7 @@ pub fn allow_plugin(
     println!("allowing plugin: {}", contracts.get(plugin_name).unwrap());
     // allow a plugin to be used by smart account by calling the plugin manager
     wasm.execute(
-        contracts.get("plugin_manager").unwrap().clone(),
+        &contracts.get("plugin_manager").unwrap().to_string(),
         &PluginManagerExecuteMsg::AllowPlugin {
             plugin_address: contracts.get(plugin_name).unwrap().clone(),
             plugin_type,
