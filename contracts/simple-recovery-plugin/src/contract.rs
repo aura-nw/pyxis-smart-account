@@ -70,7 +70,7 @@ pub fn execute(
 /// - store the parsed config in a map
 fn handle_register(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     config: String,
 ) -> Result<Response, ContractError> {
@@ -88,13 +88,13 @@ fn handle_register(
 
 fn handle_unregister(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     // we can just delete it but we will load it to make sure it is valid
 
     // load config of sender
-    let config = CONFIG_MAP.load(deps.storage, &info.sender)?;
+    let _config = CONFIG_MAP.load(deps.storage, &info.sender)?;
 
     // if it can be load, it is valid
     // delete the config
@@ -105,11 +105,11 @@ fn handle_unregister(
 
 fn handle_recover(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     caller: String,
-    pubkey: Vec<u8>,
-    credentials: Vec<u8>,
+    _pubkey: Vec<u8>,
+    _credentials: Vec<u8>,
 ) -> Result<Response, ContractError> {
     // load config of sender
     let config = CONFIG_MAP.load(deps.storage, &info.sender)?;

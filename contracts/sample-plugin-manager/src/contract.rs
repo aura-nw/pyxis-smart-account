@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -91,7 +91,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PluginInfo { address } => {
             println!("address: {}", address);
             let plugin = PLUGINS.load(deps.storage, &address)?;
-            to_binary(&PluginResponse {
+            to_json_binary(&PluginResponse {
                 name: plugin.name,
                 plugin_type: plugin.plugin_type,
                 version: plugin.version,

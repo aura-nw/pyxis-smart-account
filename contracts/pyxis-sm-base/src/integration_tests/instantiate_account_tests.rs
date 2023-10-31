@@ -1,9 +1,11 @@
 use aura_std::types::smartaccount::v1beta1::{CodeID, Params};
 use aura_test_tube::{AuraTestApp, SmartAccount, Wasm};
+
 use cosmos_sdk_proto::cosmos::bank::v1beta1::{MsgSend, MsgSendResponse};
 use cosmos_sdk_proto::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse};
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
 use cosmos_sdk_proto::traits::MessageExt;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::coins;
 use std::option::Option::None;

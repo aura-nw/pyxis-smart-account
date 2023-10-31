@@ -1,24 +1,12 @@
-use crate::contract::{execute, instantiate, query, sudo as sudo_fn};
 use crate::msg::InstantiateMsg;
+use aura_std::types::smartaccount::v1beta1::{CodeID, Params};
+use aura_test_tube::SmartAccount;
 use aura_test_tube::{AuraTestApp, Wasm};
-use cosmwasm_std::{coins, Addr, Empty};
+use cosmwasm_std::{coins, Addr};
 use pyxis_sm::plugin_manager_msg::PluginType;
-use sample_plugin::{
-    contract::{
-        execute as plugin_execute, instantiate as plugin_instantiate, query as plugin_query,
-    },
-    msg::InstantiateMsg as PluginInstantiateMsg,
-};
-use sample_plugin_manager::{
-    contract::{
-        execute as plugin_manager_execute, instantiate as plugin_manager_instantiate,
-        query as plugin_manager_query,
-    },
-    msg::{ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg},
-};
-use simple_recovery_plugin::contract::{
-    execute as recovery_plugin_execute, instantiate as recovery_plugin_instantiate,
-    query as recovery_plugin_query,
+use sample_plugin::msg::InstantiateMsg as PluginInstantiateMsg;
+use sample_plugin_manager::msg::{
+    ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg,
 };
 use std::collections::HashMap;
 use test_tube::{Module, SigningAccount};
@@ -61,6 +49,23 @@ pub fn mock_app<'a>() -> (AuraTestApp, SigningAccount, HashMap<&'a str, u64>) {
         .data
         .code_id;
     code_ids.insert("smart_account", smart_account_code_id);
+    // set whitelist for code id, don't need government
+    let params = Params {
+        whitelist_code_id: vec![CodeID {
+            code_id: smart_account_code_id,
+            status: true,
+        }],
+        disable_msgs_list: vec![],
+        max_gas_execute: 2000000,
+    };
+    let param_set = aura_std::shim::Any {
+        type_url: String::from("/aura.smartaccount.v1beta1.Params"),
+        value: params.to_bytes().unwrap(),
+    };
+    let _ = app.set_param_set("smartaccount", param_set.into()).unwrap();
+    // query smartaccount module param set
+    // let sa_params = smartaccount.query_params().unwrap();
+    // assert_eq!(sa_params.params, Some(params));
 
     let sample_plugin_code_id = wasm
         .store_code(&sample_plugin_code(), None, &deployer)
@@ -86,6 +91,61 @@ pub fn mock_app<'a>() -> (AuraTestApp, SigningAccount, HashMap<&'a str, u64>) {
     println!("code_ids: {:?}", code_ids);
 
     (app, deployer, code_ids)
+}
+
+pub fn setup_smart_account(
+    app: &mut AuraTestApp,
+    user: &SigningAccount,
+    code_ids: &HashMap<&str, u64>,
+    contracts: &HashMap<String, Addr>,
+) -> Addr {
+    let smartaccount = SmartAccount::new(app);
+
+    let pub_key = aura_std::shim::Any {
+        type_url: String::from("/cosmos.crypto.secp256k1.PubKey"),
+        value: cosmos_sdk_proto::cosmos::crypto::secp256k1::PubKey {
+            key: user.public_key().to_bytes(),
+        }
+        .to_bytes()
+        .unwrap(),
+    };
+    // or simple
+    // let pub_key = acc.public_key().to_any().unwrap();
+    let salt = "salt123".as_bytes().to_vec();
+    let sm_code_id = *code_ids.get("smart_account").unwrap();
+
+    let init_msg = serde_json_wasm::to_string(&InstantiateMsg {
+        plugin_manager_addr: contracts.get("plugin_manager").unwrap().clone(),
+    })
+    .as_bytes()
+    .to_vec();
+
+    let sa_addr = smartaccount
+        .query_generate_account(sm_code_id, salt.clone(), init_msg.clone(), pub_key.clone())
+        .unwrap();
+
+    // send coin to smartaccount
+    // let banksend_res: RunnerExecuteResult<MsgSendResponse> = send_coin(
+    //     &app,
+    //     &user,
+    //     sa_addr.clone(),
+    //     vec![Coin {
+    //         denom: "uaura".to_string(),
+    //         amount: "10000000".to_string(),
+    //     }],
+    // );
+    // assert!(banksend_res.is_ok());
+    // let acc_balance = get_account_balances(&app, sa_addr.clone(), "uaura");
+    // assert_eq!(acc_balance, 10000000u128);
+
+    let sa_acc = app
+        .init_local_smart_account(sa_addr.clone(), user.private_key())
+        .unwrap();
+    let activate_res = smartaccount
+        .activate_account(sm_code_id, salt, init_msg, pub_key, &sa_acc)
+        .unwrap();
+    println!("activate res: {:?}", activate_res);
+    return Addr::unchecked(sa_addr);
 }
 
 pub fn setup_contracts<'a>(
