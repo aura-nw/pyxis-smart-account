@@ -2,6 +2,9 @@ use crate::msg::InstantiateMsg;
 use aura_std::types::smartaccount::v1beta1::{CodeID, Params};
 use aura_test_tube::SmartAccount;
 use aura_test_tube::{AuraTestApp, Wasm};
+use cosmos_sdk_proto::cosmos::bank::v1beta1::{MsgSend, MsgSendResponse};
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
+use cosmos_sdk_proto::traits::MessageExt;
 use cosmwasm_std::{coins, Addr};
 use pyxis_sm::plugin_manager_msg::PluginType;
 use sample_plugin::msg::InstantiateMsg as PluginInstantiateMsg;
@@ -9,11 +12,11 @@ use sample_plugin_manager::msg::{
     ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg,
 };
 use std::collections::HashMap;
-use test_tube::{Module, SigningAccount};
+use test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount};
 
 // since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
 pub const SM_ADDRESS: &str = "contract1";
-pub const ROOT_PATH: &str = "artifacts";
+pub const ROOT_PATH: &str = "../../artifacts";
 
 pub fn smart_account_code() -> Vec<u8> {
     std::fs::read(format!("{}/pyxis_sm_base.wasm", ROOT_PATH)).unwrap()
@@ -31,13 +34,22 @@ pub fn sample_plugin_manager_code() -> Vec<u8> {
     std::fs::read(format!("{}/sample_plugin_manager.wasm", ROOT_PATH)).unwrap()
 }
 
-pub fn mock_app<'a>() -> (AuraTestApp, SigningAccount, HashMap<&'a str, u64>) {
+pub fn mock_app<'a>() -> (
+    AuraTestApp,
+    SigningAccount,
+    SigningAccount,
+    HashMap<&'a str, u64>,
+) {
     let app = AuraTestApp::default();
     let wasm = Wasm::new(&app);
 
     println!("current directory: {:?}", std::env::current_dir().unwrap());
 
     let deployer = app
+        .init_base_account(&coins(100_000_000_000, "uaura"))
+        .unwrap();
+
+    let user = app
         .init_base_account(&coins(100_000_000_000, "uaura"))
         .unwrap();
 
@@ -90,7 +102,7 @@ pub fn mock_app<'a>() -> (AuraTestApp, SigningAccount, HashMap<&'a str, u64>) {
 
     println!("code_ids: {:?}", code_ids);
 
-    (app, deployer, code_ids)
+    (app, deployer, user, code_ids)
 }
 
 pub fn setup_smart_account(
@@ -117,33 +129,41 @@ pub fn setup_smart_account(
     let init_msg = serde_json_wasm::to_string(&InstantiateMsg {
         plugin_manager_addr: contracts.get("plugin_manager").unwrap().clone(),
     })
+    .unwrap()
     .as_bytes()
     .to_vec();
+
+    println!(
+        "plugin manager addr: {:?}",
+        contracts.get("plugin_manager").unwrap()
+    );
 
     let sa_addr = smartaccount
         .query_generate_account(sm_code_id, salt.clone(), init_msg.clone(), pub_key.clone())
         .unwrap();
 
-    // send coin to smartaccount
-    // let banksend_res: RunnerExecuteResult<MsgSendResponse> = send_coin(
-    //     &app,
-    //     &user,
-    //     sa_addr.clone(),
-    //     vec![Coin {
-    //         denom: "uaura".to_string(),
-    //         amount: "10000000".to_string(),
-    //     }],
-    // );
-    // assert!(banksend_res.is_ok());
-    // let acc_balance = get_account_balances(&app, sa_addr.clone(), "uaura");
-    // assert_eq!(acc_balance, 10000000u128);
+    // send some coins to the smart account
+    let _: RunnerExecuteResult<MsgSendResponse> = app.execute(
+        MsgSend {
+            from_address: user.address(),
+            to_address: sa_addr.clone(),
+            amount: vec![Coin {
+                denom: "uaura".to_string(),
+                amount: "1000000".to_string(),
+            }],
+        },
+        "/cosmos.bank.v1beta1.MsgSend",
+        user,
+    );
 
     let sa_acc = app
         .init_local_smart_account(sa_addr.clone(), user.private_key())
         .unwrap();
+
     let activate_res = smartaccount
         .activate_account(sm_code_id, salt, init_msg, pub_key, &sa_acc)
         .unwrap();
+
     println!("activate res: {:?}", activate_res);
     return Addr::unchecked(sa_addr);
 }
@@ -169,29 +189,11 @@ pub fn setup_contracts<'a>(
 
     println!(
         "sample plugin manager: {:?}",
-        instantiate_plugin_manager_res
+        instantiate_plugin_manager_res.data.address
     );
 
     let plugin_manager_addr = Addr::unchecked(instantiate_plugin_manager_res.data.address);
     contracts.insert("plugin_manager".to_string(), plugin_manager_addr.clone());
-
-    let instantiate_sm_res = wasm
-        .instantiate(
-            *code_ids.get("smart_account").unwrap(),
-            &InstantiateMsg {
-                plugin_manager_addr,
-            },
-            None,
-            Some("smart account 1"),
-            &vec![],
-            deployer,
-        )
-        .unwrap();
-    println!("smart_account_addr: {:?}", instantiate_sm_res);
-    contracts.insert(
-        "smart_account".to_string(),
-        Addr::unchecked(instantiate_sm_res.data.address),
-    );
 
     // loop to create 5 plugins
     for i in 1..5 {

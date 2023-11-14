@@ -12,7 +12,7 @@ use std::option::Option::None;
 use test_tube::runner::result::RunnerExecuteResult;
 use test_tube::{Account, Module, Runner, SigningAccount};
 
-use crate::integration_tests::test_setup::setup_contracts;
+use crate::integration_tests::test_setup::{setup_contracts, setup_smart_account};
 
 use super::test_setup::mock_app;
 
@@ -63,167 +63,62 @@ struct Listen {
 
 #[test]
 fn test_deploy() {
-    let (mut app, deployer, code_ids) = mock_app();
-    setup_contracts(&mut app, &deployer, &code_ids);
-}
+    let (mut app, deployer, user, code_ids) = mock_app();
+    let contracts = setup_contracts(&mut app, &deployer, &code_ids);
 
-#[test]
-fn test_smartaccount() {
-    // default chain
-    // id: aura-testnet
-    // denom: uaura
-    let app = AuraTestApp::default();
+    // let sm_address = contracts.get("smart_account").unwrap().clone();
 
-    let acc = app
-        .init_base_account(&coins(100_000_000_000, "uaura"))
-        .unwrap();
-    let acc_balance = get_account_balances(&app, acc.address(), "uaura");
-    assert_eq!(acc_balance, 100_000_000_000u128);
+    let sm_address = setup_smart_account(&mut app, &deployer, &code_ids, &contracts);
 
-    let wasm = Wasm::new(&app);
-    let smartaccount = SmartAccount::new(&app);
-
-    let test_code = std::fs::read("../../artifacts/pyxis_sm_base.wasm").unwrap(); // load contract wasm
-
-    // store wasm for smartaccount initialization
-    let test_code_id = wasm
-        .store_code(&test_code, None, &acc)
-        .unwrap()
-        .data
-        .code_id;
-    assert_eq!(test_code_id, 1);
-
-    // set whitelist for code id, don't need government
-    let params = Params {
-        whitelist_code_id: vec![CodeID {
-            code_id: test_code_id,
-            status: true,
-        }],
-        disable_msgs_list: vec![],
-        max_gas_execute: 2000000,
-    };
-    let param_set = aura_std::shim::Any {
-        type_url: String::from("/aura.smartaccount.v1beta1.Params"),
-        value: params.to_bytes().unwrap(),
-    };
-    let _ = app.set_param_set("smartaccount", param_set.into()).unwrap();
-    // query smartaccount module param set
-    let sa_params = smartaccount.query_params().unwrap();
-    assert_eq!(sa_params.params, Some(params));
-
-    // generate smartaccount address
-    let pub_key = aura_std::shim::Any {
-        type_url: String::from("/cosmos.crypto.secp256k1.PubKey"),
-        value: cosmos_sdk_proto::cosmos::crypto::secp256k1::PubKey {
-            key: acc.public_key().to_bytes(),
-        }
-        .to_bytes()
-        .unwrap(),
-    };
-    // or simple
-    // let pub_key = acc.public_key().to_any().unwrap();
-    let salt = "test account".as_bytes().to_vec();
-    let init_msg = "{\"limit\":{\"denom\":\"uaura\",\"amount\":\"10000\"}}"
-        .as_bytes()
-        .to_vec();
-
-    let sa_addr = smartaccount
-        .query_generate_account(
-            test_code_id,
-            salt.clone(),
-            init_msg.clone(),
-            pub_key.clone(),
-        )
+    let smartaccount = app
+        .init_local_smart_account(sm_address.to_string(), deployer.private_key())
         .unwrap();
 
-    // send coin to smartaccount
-    let banksend_res: RunnerExecuteResult<MsgSendResponse> = send_coin(
-        &app,
-        &acc,
-        sa_addr.clone(),
-        vec![Coin {
-            denom: "uaura".to_string(),
-            amount: "10000000".to_string(),
-        }],
+    // let send_res: RunnerExecuteResult<MsgSendResponse> = app.execute(
+    //     MsgSend {
+    //         from_address: sm_address.to_string(),
+    //         to_address: deployer.address(),
+    //         amount: vec![Coin {
+    //             denom: "uaura".to_string(),
+    //             amount: "10000".to_string(),
+    //         }],
+    //     },
+    //     "/cosmos.bank.v1beta1.MsgSend",
+    //     &user,
+    // );
+    // // this will fail because of insufficient fund
+    // let err = send_res.unwrap_err();
+    // assert!(err.to_string().contains("insufficient fund"));
+
+    // send some funds to smart account
+    let send_res: RunnerExecuteResult<MsgSendResponse> = app.execute(
+        MsgSend {
+            from_address: user.address(),
+            to_address: sm_address.to_string(),
+            amount: vec![Coin {
+                denom: "uaura".to_string(),
+                amount: "100000000".to_string(),
+            }],
+        },
+        "/cosmos.bank.v1beta1.MsgSend",
+        &user,
     );
-    assert!(banksend_res.is_ok());
-    let acc_balance = get_account_balances(&app, sa_addr.clone(), "uaura");
-    assert_eq!(acc_balance, 10000000u128);
+    assert!(send_res.is_ok(), "can send to smart account");
 
-    // local account which has not been initialized on-chain
-    let sa_acc = app
-        .init_local_smart_account(sa_addr.clone(), acc.private_key())
-        .unwrap();
-    // initializ smartaccount on-chain
-    // execute with default gas setting
-    // gas: 2000000
-    // gas_price: 0.025
-    // in order to modify gas setting, use &sa_acc.with_fee_setting(fee_setting) instead
-    let _ = smartaccount
-        .activate_account(test_code_id, salt, init_msg, pub_key, &sa_acc)
-        .unwrap();
-
-    let acc2 = app.init_base_account(&coins(10, "uaura")).unwrap();
-
-    let banksend_res: RunnerExecuteResult<MsgSendResponse> = send_coin(
-        &app,
-        &sa_acc,
-        acc2.address(),
-        vec![Coin {
-            denom: "uaura".to_string(),
-            amount: "5000".to_string(),
-        }],
+    // send again from smart account, this time is a success
+    let send_res: RunnerExecuteResult<MsgSendResponse> = app.execute(
+        MsgSend {
+            from_address: sm_address.to_string(),
+            to_address: deployer.address(),
+            amount: vec![Coin {
+                denom: "uaura".to_string(),
+                amount: "1000".to_string(),
+            }],
+        },
+        "/cosmos.bank.v1beta1.MsgSend",
+        &smartaccount,
     );
-    assert!(banksend_res.is_ok());
+    println!("send res: {:?}", send_res);
 
-    // send coin from smartaccount success
-    let acc_balance = get_account_balances(&app, acc2.address(), "uaura");
-    assert_eq!(acc_balance, 5010u128);
-
-    let banksend_res: RunnerExecuteResult<MsgSendResponse> = send_coin(
-        &app,
-        &sa_acc,
-        acc2.address(),
-        vec![Coin {
-            denom: "uaura".to_string(),
-            amount: "5001".to_string(),
-        }],
-    );
-    assert!(banksend_res.is_err());
-
-    // send coin from smartaccount fail, reach spend-limit
-    let acc_balance = get_account_balances(&app, acc2.address(), "uaura");
-    assert_eq!(acc_balance, 5010u128);
-
-    let listener_code = std::fs::read("../../artifacts/listener.wasm").unwrap(); // load contract wasm
-
-    let listener_code_id = wasm
-        .store_code(&listener_code, None, &acc)
-        .unwrap()
-        .data
-        .code_id;
-    assert_eq!(listener_code_id, 2);
-
-    let wasm_instantiate = wasm
-        .instantiate(
-            listener_code_id,
-            &EmptyInit {},
-            None,
-            Some("listener"),
-            &[],
-            &acc,
-        )
-        .unwrap();
-
-    // use smartaccount to execute contract
-    let _ = wasm
-        .execute(
-            &wasm_instantiate.data.address,
-            &Listen {
-                listen: EmptyInit {},
-            },
-            &[],
-            &sa_acc,
-        )
-        .unwrap();
+    assert!(send_res.is_ok(), "can send from smart account");
 }

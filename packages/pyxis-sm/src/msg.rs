@@ -23,7 +23,7 @@ impl Default for CallInfo {
 #[cw_serde]
 pub struct SdkMsg {
     pub type_url: String,
-    pub value: Vec<u8>,
+    pub value: String,
 }
 
 #[cw_serde]
