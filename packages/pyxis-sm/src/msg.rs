@@ -1,10 +1,10 @@
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Coin;
 
 #[cw_serde]
 pub struct CallInfo {
-    pub fee: u128,
-    pub gas_price: u128,
-    pub gas_limit: u128,
+    pub fee: Vec<Coin>,
+    pub gas: u64,
     pub fee_payer: String,
     pub fee_granter: String,
 }
@@ -12,9 +12,8 @@ pub struct CallInfo {
 impl Default for CallInfo {
     fn default() -> Self {
         CallInfo {
-            fee: 0,
-            gas_price: 0,
-            gas_limit: 0,
+            fee: vec![],
+            gas: 0,
             fee_payer: "".to_string(),
             fee_granter: "".to_string(),
         }
@@ -24,7 +23,7 @@ impl Default for CallInfo {
 #[cw_serde]
 pub struct SdkMsg {
     pub type_url: String,
-    pub value: Vec<u8>,
+    pub value: String,
 }
 
 #[cw_serde]

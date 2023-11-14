@@ -1,6 +1,6 @@
 use std::vec;
 
-use cosmwasm_std::{to_binary, CosmosMsg, StdError};
+use cosmwasm_std::{to_json_binary, CosmosMsg, StdError};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -242,7 +242,7 @@ pub fn register_plugin(
     let plugin_info: PluginResponse =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: plugin_manager_addr.to_string(),
-            msg: to_binary(&query_plugin_msg)?,
+            msg: to_json_binary(&query_plugin_msg)?,
         }))?;
 
     // TODO: query the contract info of the plugin_address and check if the checksum is the same

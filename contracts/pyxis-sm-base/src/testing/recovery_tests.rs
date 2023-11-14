@@ -2,7 +2,7 @@ use std::vec;
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::Addr;
-use cw_multi_test::{App, Executor};
+use cw_multi_test::Executor;
 use pyxis_sm::msg::PyxisSudoMsg;
 use pyxis_sm::plugin_manager_msg::PluginType;
 use simple_recovery_plugin::state::RecoveryConfig;
