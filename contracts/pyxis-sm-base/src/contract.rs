@@ -1,6 +1,7 @@
 use std::vec;
 
-use cosmwasm_std::{to_json_binary, CosmosMsg, StdError, SubMsg, ReplyOn};
+use cosmos_sdk_proto::traits::{TypeUrl, Message};
+use cosmwasm_std::{to_json_binary, CosmosMsg, SubMsg, StdError, ReplyOn};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -8,11 +9,13 @@ use cosmwasm_std::{
     wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
     StdResult, WasmQuery,
 };
+use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
+use serde_json_wasm::de::Error;
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
+use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS, ERROR_LOG};
 
 use pyxis_sm::msg::{
     CallInfo, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, PyxisSudoMsg, SdkMsg,
@@ -109,24 +112,54 @@ pub fn sudo(deps: DepsMut, env: Env, msg: PyxisSudoMsg) -> Result<Response, Cont
 /// if any of the plugin returns an error, the whole transaction will be rejected
 pub fn pre_execute(
     deps: DepsMut,
-    _env: Env,
-    msg: Vec<SdkMsg>,
+    env: Env,
+    msgs: Vec<SdkMsg>,
     call_info: CallInfo,
     is_authz: bool,
 ) -> Result<Response, ContractError> {
+    // if tx contains UnregisterPlugin messages, make sure those plugins are not called at this time
+    let mut disable_plugins: Vec<Addr> = Vec::new();
+    for msg in &msgs {
+        if msg.type_url != MsgExecuteContract::TYPE_URL{
+            continue;
+        }
+
+        let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
+        if msg_exec.contract == env.contract.address.to_string() {
+            // execute call to this smart-account contract must be
+            // UnregisterPlugin or RegisterPlugin
+            let msg_raw: Result<ExecuteMsg, Error> = serde_json_wasm::from_slice(msg_exec.msg.as_slice());
+            if msg_raw.is_err() {
+                // should never return err in `pre_execute`
+                // if not a message of type `ExecuteMsg`, log it and return 
+                // in this situation, there will be no need to log here as it will eventually fail when executing tx
+                ERROR_LOG.save(deps.storage, &Some(msg_raw.unwrap_err().to_string()))?;
+                return Ok(Response::new());
+            }
+            let msg = msg_raw.unwrap();
+            match msg {
+                ExecuteMsg::UnregisterPlugin { plugin_address } => {
+                    disable_plugins.push(plugin_address);
+                },
+                _ => {}
+            }
+        }
+    }
+
     // call the pre_execute message of all the plugins
     let pre_execute_msgs = PLUGINS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
         .filter(|(_, plugin)| {
             plugin.status == PluginStatus::Active && plugin.plugin_type != PluginType::Recovery
+            && !disable_plugins.iter().any(|addr| addr == &plugin.contract_address)
         })
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
                 wasm_execute(
                     &plugin.contract_address,
                     &PyxisPluginExecuteMsg::PreExecute {
-                        msgs: msg.clone(),
+                        msgs: msgs.clone(),
                         call_info: call_info.clone(),
                         is_authz
                     },
@@ -136,8 +169,9 @@ pub fn pre_execute(
             )
         })
         .collect::<Vec<CosmosMsg>>();
-
-    Ok(Response::new().add_messages(pre_execute_msgs))
+        
+    Ok(Response::new().add_messages(pre_execute_msgs)
+        .add_attribute("action", "pre_execute"))
 }
 
 /// after_execute is called for every message after it is executed
@@ -145,24 +179,56 @@ pub fn pre_execute(
 /// if any of the plugin returns an error, the whole transaction will be rejected
 pub fn after_execute(
     deps: DepsMut,
-    _env: Env,
-    msg: Vec<SdkMsg>,
+    env: Env,
+    msgs: Vec<SdkMsg>,
     call_info: CallInfo,
-    is_authz: bool,
+    is_authz: bool
 ) -> Result<Response, ContractError> {
+
+    if let Some(err) = ERROR_LOG.load(deps.storage)? {
+        // not need to clear ERROR_LOG value here
+        // tx return err so state will not be updated
+        return Err(ContractError::CustomError { val: err });
+    }
+
+    // if tx contains RegisterPlugin messages, make sure those plugins are not called at this time
+    let mut disable_plugins: Vec<Addr> = Vec::new();
+    for msg in &msgs {
+        if msg.type_url != MsgExecuteContract::TYPE_URL{
+            continue;
+        }
+
+        let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
+
+        if msg_exec.contract == env.contract.address.to_string() {
+            // execute call to this smart-account contract must be
+            // UnregisterPlugin or RegisterPlugin
+            let msg: ExecuteMsg = serde_json_wasm::from_slice(msg_exec.msg.as_slice()).unwrap();
+            match msg {
+                ExecuteMsg::RegisterPlugin { plugin_address, checksum: _, config: _ } => {
+                    disable_plugins.push(plugin_address);
+                },
+                ExecuteMsg::UnregisterPlugin { plugin_address } => {
+                    disable_plugins.push(plugin_address);
+                }
+            }
+        }
+    }
+
     // call the pre_execute message of all the plugins
     let after_execute_msgs = PLUGINS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
         .filter(|(_, plugin)| {
             plugin.status == PluginStatus::Active && plugin.plugin_type != PluginType::Recovery
+            && !disable_plugins.iter().any(|addr| addr == &plugin.contract_address)
         })
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
                 wasm_execute(
                     &plugin.contract_address,
                     &PyxisPluginExecuteMsg::PreExecute {
-                        msgs: msg.clone(),
+                        msgs: msgs.clone(),
                         call_info: call_info.clone(),
                         is_authz
                     },
@@ -173,7 +239,8 @@ pub fn after_execute(
         })
         .collect::<Vec<CosmosMsg>>();
 
-    Ok(Response::new().add_messages(after_execute_msgs))
+    Ok(Response::new().add_messages(after_execute_msgs)
+        .add_attribute("action", "after_execute"))
 }
 
 /// handle_recover is called when a smart account is recovered (change owner)

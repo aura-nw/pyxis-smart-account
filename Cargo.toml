@@ -33,6 +33,7 @@ schemars         = "0.8.8"
 serde            = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror        = { version = "1.0.31" }
 pyxis-sm         = { path = "./packages/pyxis-sm" }
+cosmos-sdk-proto = { version = "0.19.0", default-features = false, features = ["cosmwasm"] }
 
 [workspace.dev-depenpencies]
 cw-multi-test = "0.16.1"
