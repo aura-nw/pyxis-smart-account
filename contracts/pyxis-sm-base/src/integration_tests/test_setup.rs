@@ -1,5 +1,5 @@
 use crate::msg::InstantiateMsg;
-use aura_std::types::smartaccount::v1beta1::{CodeID, Params};
+use aura_proto::types::smartaccount::v1beta1::{CodeID, Params};
 use aura_test_tube::SmartAccount;
 use aura_test_tube::{AuraTestApp, Wasm};
 use cosmos_sdk_proto::cosmos::bank::v1beta1::{MsgSend, MsgSendResponse};
@@ -12,7 +12,8 @@ use sample_plugin_manager::msg::{
     ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg,
 };
 use std::collections::HashMap;
-use test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount};
+use aura_test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount};
+use aura_test_tube::init_local_smart_account;
 
 // since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
 pub const SM_ADDRESS: &str = "contract1";
@@ -70,7 +71,7 @@ pub fn mock_app<'a>() -> (
         disable_msgs_list: vec![],
         max_gas_execute: 2000000,
     };
-    let param_set = aura_std::shim::Any {
+    let param_set = aura_proto::shim::Any {
         type_url: String::from("/aura.smartaccount.v1beta1.Params"),
         value: params.to_bytes().unwrap(),
     };
@@ -113,7 +114,7 @@ pub fn setup_smart_account(
 ) -> Addr {
     let smartaccount = SmartAccount::new(app);
 
-    let pub_key = aura_std::shim::Any {
+    let pub_key = aura_proto::shim::Any {
         type_url: String::from("/cosmos.crypto.secp256k1.PubKey"),
         value: cosmos_sdk_proto::cosmos::crypto::secp256k1::PubKey {
             key: user.public_key().to_bytes(),
@@ -156,8 +157,7 @@ pub fn setup_smart_account(
         user,
     );
 
-    let sa_acc = app
-        .init_local_smart_account(sa_addr.clone(), user.private_key())
+    let sa_acc = init_local_smart_account(sa_addr.clone(), user.private_key())
         .unwrap();
 
     let activate_res = smartaccount
