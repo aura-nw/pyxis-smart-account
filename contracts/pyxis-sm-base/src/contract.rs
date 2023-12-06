@@ -46,6 +46,8 @@ pub fn instantiate(
         },
     )?;
 
+    ERROR_LOG.save(deps.storage, &None)?;
+
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender))
