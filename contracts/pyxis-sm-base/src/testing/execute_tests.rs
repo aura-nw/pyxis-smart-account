@@ -20,6 +20,7 @@ fn pre_execute_without_plugin() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);
@@ -53,6 +54,7 @@ fn pre_execute_with_a_plugin_always_reject() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);
@@ -86,6 +88,7 @@ fn pre_execute_and_plugin_approve() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);
@@ -133,6 +136,7 @@ fn pre_execute_and_one_plugin_reject() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);
@@ -151,6 +155,7 @@ fn after_execute_without_plugin_success() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);
@@ -184,6 +189,7 @@ fn after_execute_and_plugin_reject() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);
@@ -217,6 +223,7 @@ fn after_execute_and_plugin_approve() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false
         },
     );
     println!("response: {:?}", response);

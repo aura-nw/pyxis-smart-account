@@ -84,8 +84,16 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn sudo(deps: DepsMut, env: Env, msg: PyxisSudoMsg) -> Result<Response, ContractError> {
     match msg {
-        PyxisSudoMsg::PreExecute { msgs, call_info } => pre_execute(deps, env, msgs, call_info),
-        PyxisSudoMsg::AfterExecute { msgs, call_info } => after_execute(deps, env, msgs, call_info),
+        PyxisSudoMsg::PreExecute { 
+            msgs, 
+            call_info, 
+            is_authz 
+        } => pre_execute(deps, env, msgs, call_info, is_authz),
+        PyxisSudoMsg::AfterExecute { 
+            msgs, 
+            call_info, 
+            is_authz 
+        } => after_execute(deps, env, msgs, call_info, is_authz),
         PyxisSudoMsg::Recover {
             caller,
             pubkey,
@@ -102,6 +110,7 @@ pub fn pre_execute(
     _env: Env,
     msg: Vec<SdkMsg>,
     call_info: CallInfo,
+    is_authz: bool,
 ) -> Result<Response, ContractError> {
     // call the pre_execute message of all the plugins
     let pre_execute_msgs = PLUGINS
@@ -117,6 +126,7 @@ pub fn pre_execute(
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msg.clone(),
                         call_info: call_info.clone(),
+                        is_authz
                     },
                     vec![],
                 )
@@ -136,6 +146,7 @@ pub fn after_execute(
     _env: Env,
     msg: Vec<SdkMsg>,
     call_info: CallInfo,
+    is_authz: bool,
 ) -> Result<Response, ContractError> {
     // call the pre_execute message of all the plugins
     let after_execute_msgs = PLUGINS
@@ -151,6 +162,7 @@ pub fn after_execute(
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msg.clone(),
                         call_info: call_info.clone(),
+                        is_authz
                     },
                     vec![],
                 )

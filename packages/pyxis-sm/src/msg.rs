@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Coin;
+use cosmwasm_std::{Coin, Binary};
 
 #[cw_serde]
 pub struct CallInfo {
@@ -23,7 +23,7 @@ impl Default for CallInfo {
 #[cw_serde]
 pub struct SdkMsg {
     pub type_url: String,
-    pub value: String,
+    pub value: Binary,
 }
 
 #[cw_serde]
@@ -32,11 +32,13 @@ pub enum PyxisSudoMsg {
     PreExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
+        is_authz: bool,
     },
     // after_execute is a base message which is called after any other message
     AfterExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
+        is_authz: bool,
     },
     // recover is a base message which is called when a smart account is recovered (change owner)
     Recover {
@@ -56,11 +58,13 @@ pub enum PyxisPluginExecuteMsg {
     PreExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
+        is_authz: bool,
     },
     /// AfterExecute is called at the end of a transaction
     AfterExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
+        is_authz: bool,
     },
 }
 
