@@ -1,6 +1,6 @@
 use std::vec;
 
-use cosmwasm_std::{to_json_binary, CosmosMsg, StdError};
+use cosmwasm_std::{to_json_binary, CosmosMsg, StdError, SubMsg, ReplyOn};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -22,6 +22,8 @@ use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQue
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const UNREGISTER_PLUGIN_REPLY_ID: u64 = 1;
 
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -316,16 +318,43 @@ pub fn unregister_plugin(
         }
     }
 
+    // call plugin manager to check if this plugin require unregister action
+    let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
+    let query_forced_unreg_msg = PMQueryMsg::ForcedUnregister { 
+        address: plugin.contract_address.to_string()  
+    };
+    let is_forced: bool = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: plugin_manager_addr.to_string(),
+        msg: to_json_binary(&query_forced_unreg_msg)?,
+    })).unwrap_or(false);
+
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    // call unregister in the plugin contract
-    let unregister_msg = CosmosMsg::Wasm(wasm_execute(
-        plugin_address.as_str(),
-        &PyxisPluginExecuteMsg::Unregister {},
-        vec![],
-    )?);
+    if is_forced{
+        // call unregister in the plugin contract
+        let unregister_msg = CosmosMsg::Wasm(wasm_execute(
+            plugin_address.as_str(),
+            &PyxisPluginExecuteMsg::Unregister {},
+            vec![],
+        )?);
 
-    Ok(Response::new().add_message(unregister_msg))
+        Ok(Response::new().add_message(unregister_msg))
+    }else{
+        // call unregister in the plugin contract
+        // ignore call response
+        let unregister_msg = SubMsg {
+            msg: wasm_execute(
+                plugin_address.as_str(),
+                &PyxisPluginExecuteMsg::Unregister {},
+                vec![],
+            )?.into(),
+            id: UNREGISTER_PLUGIN_REPLY_ID,
+            gas_limit: None,
+            reply_on: ReplyOn::Always
+        };
+
+        Ok(Response::new().add_submessage(unregister_msg))
+    }
 }
 
 /// Handling contract query
@@ -346,6 +375,5 @@ pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
     // With `Response` type, it is still possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
-
-    todo!()
+    Ok(Response::new())
 }

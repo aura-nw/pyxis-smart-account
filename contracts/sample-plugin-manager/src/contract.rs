@@ -67,6 +67,7 @@ pub fn execute(
                 code_id: 1,
                 address: plugin_address.clone(),
                 checksum: "checksum".to_string(),
+                forced_unregister: true,
             };
             PLUGINS.save(_deps.storage, &plugin_address.to_string(), &plugin)?;
             Ok(Response::new().add_attributes(vec![
@@ -97,6 +98,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 version: plugin.version,
                 address: plugin.address.to_string(),
             })
+        },
+        QueryMsg::ForcedUnregister { address } => {
+            let plugin = PLUGINS.load(deps.storage, &address)?;
+            to_json_binary(&plugin.forced_unregister)
         }
     }
 }
