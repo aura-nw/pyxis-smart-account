@@ -229,7 +229,7 @@ pub fn after_execute(
             CosmosMsg::Wasm(
                 wasm_execute(
                     &plugin.contract_address,
-                    &PyxisPluginExecuteMsg::PreExecute {
+                    &PyxisPluginExecuteMsg::AfterExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
                         is_authz
