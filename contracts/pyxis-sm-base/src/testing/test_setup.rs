@@ -78,7 +78,9 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
     let plugin_manager_addr = app.instantiate_contract(
         *code_ids.get("sample_plugin_manager").unwrap(),
         Addr::unchecked(SM_ADDRESS),
-        &PluginManagerInstantiateMsg {},
+        &PluginManagerInstantiateMsg {
+            admin: SM_ADDRESS.to_string()
+        },
         &vec![],
         "sample plugin manager 1",
         Some(SM_ADDRESS.to_string()),

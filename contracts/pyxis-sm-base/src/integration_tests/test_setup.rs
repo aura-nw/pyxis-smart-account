@@ -179,7 +179,9 @@ pub fn setup_contracts<'a>(
     let instantiate_plugin_manager_res = wasm
         .instantiate(
             *code_ids.get("sample_plugin_manager").unwrap(),
-            &PluginManagerInstantiateMsg {},
+            &PluginManagerInstantiateMsg {
+                admin: deployer.address()
+            },
             None,
             Some("sample_plugin_manager"),
             &[],
