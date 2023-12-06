@@ -3,7 +3,7 @@
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
-use cw_storage_plus::Map;
+use cw_storage_plus::{Item, Map};
 use pyxis_sm::plugin_manager_msg::PluginType;
 
 #[cw_serde]
@@ -18,3 +18,10 @@ pub struct Plugin {
 }
 
 pub const PLUGINS: Map<&str, Plugin> = Map::new("plugins");
+
+#[cw_serde]
+pub struct Config {
+    pub admin: Addr,
+}
+
+pub const CONFIG: Item<Config> = Item::new("config");

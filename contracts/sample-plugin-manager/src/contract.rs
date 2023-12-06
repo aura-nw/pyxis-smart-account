@@ -1,13 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Addr,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Plugin, PLUGINS};
+use crate::state::{Plugin, PLUGINS, CONFIG, Config};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -20,9 +20,14 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let config = Config {
+        admin: Addr::unchecked(msg.admin)
+    };
+    CONFIG.save(deps.storage, &config)?;
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
@@ -49,11 +54,16 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, C
 /// Handling contract execution
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
     match msg {
         ExecuteMsg::AllowPlugin {
             plugin_address,
@@ -62,24 +72,35 @@ pub fn execute(
             // just save it
             let plugin = Plugin {
                 name: "sample plugin".to_string(),
-                plugin_type: plugin_type,
+                plugin_type,
                 version: "0.1.0".to_string(),
                 code_id: 1,
                 address: plugin_address.clone(),
                 checksum: "checksum".to_string(),
                 forced_unregister: true,
             };
-            PLUGINS.save(_deps.storage, &plugin_address.to_string(), &plugin)?;
+            PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
             Ok(Response::new().add_attributes(vec![
                 ("action", "allow_plugin"),
                 ("plugin_address", plugin_address.to_string().as_str()),
             ]))
         }
         ExecuteMsg::DisallowPlugin { plugin_address } => {
-            PLUGINS.remove(_deps.storage, &plugin_address.to_string());
+            PLUGINS.remove(deps.storage, &plugin_address.to_string());
             Ok(Response::new().add_attributes(vec![
                 ("action", "disallow_plugin"),
                 ("plugin_address", plugin_address.to_string().as_str()),
+            ]))
+        }
+        ExecuteMsg::UpdatePlugin { plugin_address, forced_unregister } => {
+            let mut plugin = PLUGINS.load(deps.storage, &plugin_address.to_string())?;
+            plugin.forced_unregister = forced_unregister;
+            PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
+
+            Ok(Response::new().add_attributes(vec![
+                ("action", "update_plugin"),
+                ("plugin_address", &plugin_address.to_string()),
+                ("forced_unregister", &forced_unregister.to_string())
             ]))
         }
     }
