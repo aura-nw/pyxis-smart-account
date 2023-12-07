@@ -28,5 +28,3 @@ pub struct Plugin {
 pub const CONFIG: Item<Config> = Item::new("config");
 // PLUGINS is a map of plugin contract address to Plugin
 pub const PLUGINS: Map<&Addr, Plugin> = Map::new("plugins");
-
-pub const ERROR_LOG: Item<Option<String>> = Item::new("error log");

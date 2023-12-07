@@ -15,7 +15,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS, ERROR_LOG};
+use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
 use pyxis_sm::msg::{
     CallInfo, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, PyxisSudoMsg, SdkMsg,
@@ -43,8 +43,6 @@ pub fn instantiate(
             recoverable: false,
         },
     )?;
-
-    ERROR_LOG.save(deps.storage, &None)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -134,10 +132,9 @@ pub fn pre_execute(
             let msg_raw: Result<ExecuteMsg, Error> = serde_json_wasm::from_slice(msg_exec.msg.as_slice());
             if msg_raw.is_err() {
                 // should never return err in `pre_execute`
-                // if not a message of type `ExecuteMsg`, log it and return 
-                // in this situation, there will be no need to log here as it will eventually fail when executing tx
-                ERROR_LOG.save(deps.storage, &Some(msg_raw.unwrap_err().to_string()))?;
-                return Ok(Response::new());
+                // if not a message of type `ExecuteMsg` return 
+                // in this situation, there will be no need to log error here as it will eventually fail when executing tx
+                return Ok(Response::new().add_attribute("action", "pre_execute"));
             }
             let msg = msg_raw.unwrap();
             match msg {
@@ -195,12 +192,6 @@ pub fn after_execute(
     call_info: CallInfo,
     is_authz: bool
 ) -> Result<Response, ContractError> {
-
-    if let Some(err) = ERROR_LOG.load(deps.storage)? {
-        // not need to clear ERROR_LOG value here
-        // tx return err so state will not be updated
-        return Err(ContractError::CustomError { val: err });
-    }
 
     // if tx contains RegisterPlugin messages, make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
