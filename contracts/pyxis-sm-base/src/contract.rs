@@ -371,7 +371,8 @@ pub fn register_plugin(
         vec![],
     )?);
 
-    Ok(Response::new().add_message(register_msg))
+    Ok(Response::new().add_attribute("action", "register")
+    .add_message(register_msg))
 }
 
 /// Unregister a plugin from this smart account
