@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
+use crate::state::PluginStatus;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
@@ -17,6 +18,10 @@ pub enum ExecuteMsg {
     },
     UnregisterPlugin {
         plugin_address: Addr,
+    },
+    UpdatePlugin {
+        plugin_address: Addr,
+        status: PluginStatus,
     },
 }
 

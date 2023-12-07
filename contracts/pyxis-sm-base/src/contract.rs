@@ -82,6 +82,9 @@ pub fn execute(
         } => register_plugin(deps, env, info, plugin_address, checksum, config),
         ExecuteMsg::UnregisterPlugin { plugin_address } => {
             unregister_plugin(deps, env, info, plugin_address)
+        },
+        ExecuteMsg::UpdatePlugin { plugin_address, status } => {
+            update_plugin(deps, env, info, plugin_address, status)
         }
     }
 }
@@ -117,7 +120,7 @@ pub fn pre_execute(
     call_info: CallInfo,
     is_authz: bool,
 ) -> Result<Response, ContractError> {
-    // if tx contains UnregisterPlugin messages, make sure those plugins are not called at this time
+    // if tx contains UnregisterPlugin or deactive messages, make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
         if msg.type_url != MsgExecuteContract::TYPE_URL{
@@ -127,7 +130,7 @@ pub fn pre_execute(
         let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
         if msg_exec.contract == env.contract.address.to_string() {
             // execute call to this smart-account contract must be
-            // UnregisterPlugin or RegisterPlugin
+            // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             let msg_raw: Result<ExecuteMsg, Error> = serde_json_wasm::from_slice(msg_exec.msg.as_slice());
             if msg_raw.is_err() {
                 // should never return err in `pre_execute`
@@ -141,6 +144,14 @@ pub fn pre_execute(
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
                 },
+                ExecuteMsg::UpdatePlugin { plugin_address, status } => {
+                    match status {
+                        PluginStatus::Inactive => {
+                            disable_plugins.push(plugin_address);
+                        },
+                        _ => {}
+                    }
+                }
                 _ => {}
             }
         }
@@ -202,7 +213,7 @@ pub fn after_execute(
 
         if msg_exec.contract == env.contract.address.to_string() {
             // execute call to this smart-account contract must be
-            // UnregisterPlugin or RegisterPlugin
+            // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             let msg: ExecuteMsg = serde_json_wasm::from_slice(msg_exec.msg.as_slice()).unwrap();
             match msg {
                 ExecuteMsg::RegisterPlugin { plugin_address, checksum: _, config: _ } => {
@@ -210,6 +221,14 @@ pub fn after_execute(
                 },
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
+                },
+                ExecuteMsg::UpdatePlugin { plugin_address, status } => {
+                    match status {
+                        PluginStatus::Inactive => {
+                            disable_plugins.push(plugin_address);
+                        },
+                        _ => {}
+                    }
                 }
             }
         }
@@ -420,6 +439,44 @@ pub fn unregister_plugin(
         return Ok(Response::new().add_attribute("action", "unregister_plugin")
             .add_message(unregister_msg));
     }
+}
+
+fn update_plugin(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    plugin_address: Addr,
+    status: PluginStatus
+) -> Result<Response, ContractError> {
+
+    let mut plugin = PLUGINS.load(deps.storage, &plugin_address)?;
+
+    match status {
+        PluginStatus::Inactive => {
+            // call plugin manager to check if this plugin is enabled
+            let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
+            let query_plugin_msg = PMQueryMsg::PluginInfo {
+                address: plugin_address.to_string(),
+            };
+            let plugin_info : Result<PluginResponse, StdError> =
+                deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: plugin_manager_addr.to_string(),
+                    msg: to_json_binary(&query_plugin_msg)?,
+                }));
+            
+            if plugin_info.is_ok() && plugin_info.unwrap().enabled {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Plugin is enabled, cannot deactivate",
+                )))
+            }
+        },
+        _ => {}
+    }
+
+    plugin.status = status;
+    PLUGINS.save(deps.storage, &plugin_address, &plugin)?;
+
+    Ok(Response::new().add_attribute("action", "update_plugin"))
 }
 
 /// Handling contract query
