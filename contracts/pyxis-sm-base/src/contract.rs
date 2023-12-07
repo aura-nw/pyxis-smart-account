@@ -141,13 +141,8 @@ pub fn pre_execute(
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
                 },
-                ExecuteMsg::UpdatePlugin { plugin_address, status } => {
-                    match status {
-                        PluginStatus::Inactive => {
-                            disable_plugins.push(plugin_address);
-                        },
-                        _ => {}
-                    }
+                ExecuteMsg::UpdatePlugin { plugin_address, status: _ } => {
+                    disable_plugins.push(plugin_address);
                 }
                 _ => {}
             }
@@ -213,13 +208,8 @@ pub fn after_execute(
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
                 },
-                ExecuteMsg::UpdatePlugin { plugin_address, status } => {
-                    match status {
-                        PluginStatus::Inactive => {
-                            disable_plugins.push(plugin_address);
-                        },
-                        _ => {}
-                    }
+                ExecuteMsg::UpdatePlugin { plugin_address, status: _ } => {
+                    disable_plugins.push(plugin_address);
                 }
             }
         }
@@ -442,6 +432,11 @@ fn update_plugin(
 ) -> Result<Response, ContractError> {
 
     let mut plugin = PLUGINS.load(deps.storage, &plugin_address)?;
+
+    assert!(
+        plugin.status != status,
+        "Plugin status not change"
+    );
 
     match status {
         PluginStatus::Inactive => {
