@@ -118,7 +118,8 @@ pub fn pre_execute(
     call_info: CallInfo,
     is_authz: bool,
 ) -> Result<Response, ContractError> {
-    // if tx contains UnregisterPlugin or deactive messages, make sure those plugins are not called at this time
+    // if tx contains UnregisterPlugin or UpdatePlugin messages
+    // make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
         if msg.type_url != MsgExecuteContract::TYPE_URL{
@@ -188,7 +189,8 @@ pub fn after_execute(
     is_authz: bool
 ) -> Result<Response, ContractError> {
 
-    // if tx contains RegisterPlugin messages, make sure those plugins are not called at this time
+    // if tx contains RegisterPlugin, UnregisterPlugin or UpdatePlugin messages
+    // make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
         if msg.type_url != MsgExecuteContract::TYPE_URL{
