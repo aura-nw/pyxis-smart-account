@@ -181,8 +181,8 @@ pub fn pre_execute(
         })
         .collect::<Vec<CosmosMsg>>();
         
-    Ok(Response::new().add_messages(pre_execute_msgs)
-        .add_attribute("action", "pre_execute"))
+    Ok(Response::new().add_attribute("action", "pre_execute")
+    .add_messages(pre_execute_msgs))
 }
 
 /// after_execute is called for every message after it is executed
@@ -258,8 +258,8 @@ pub fn after_execute(
         })
         .collect::<Vec<CosmosMsg>>();
 
-    Ok(Response::new().add_messages(after_execute_msgs)
-        .add_attribute("action", "after_execute"))
+    Ok(Response::new().add_attribute("action", "after_execute")
+    .add_messages(after_execute_msgs))
 }
 
 /// handle_recover is called when a smart account is recovered (change owner)
@@ -312,7 +312,8 @@ pub fn handle_recover(
         "There should be only one recovery plugin"
     );
 
-    Ok(Response::new().add_messages(recover_msgs))
+    Ok(Response::new().add_attribute("action", "recover")
+    .add_messages(recover_msgs))
 }
 
 /// Register a plugin to this smart account

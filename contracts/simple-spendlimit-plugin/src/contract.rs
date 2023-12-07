@@ -85,7 +85,7 @@ fn handle_pre_execute(
     _call_info: CallInfo,
     _is_authz: bool
 ) -> Result<Response, ContractError> {
-    Ok(Response::new())
+    Ok(Response::new().add_attribute("action", "pre_execute"))
 }
 
 fn handle_after_execute(
@@ -163,7 +163,7 @@ fn handle_after_execute(
     // update limits
     LIMITS.save(deps.storage, &info.sender, &limits)?;
 
-    Ok(Response::new())
+    Ok(Response::new().add_attribute("action", "after_execute"))
 }
 
 fn handle_register(
