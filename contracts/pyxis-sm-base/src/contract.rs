@@ -1,7 +1,7 @@
 use std::vec;
 
 use cosmos_sdk_proto::traits::{TypeUrl, Message};
-use cosmwasm_std::{to_json_binary, CosmosMsg, SubMsg, StdError, ReplyOn};
+use cosmwasm_std::{to_json_binary, CosmosMsg, StdError};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -25,8 +25,6 @@ use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQue
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-const UNREGISTER_PLUGIN_REPLY_ID: u64 = 1;
 
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -327,6 +325,13 @@ pub fn register_plugin(
             contract_addr: plugin_manager_addr.to_string(),
             msg: to_json_binary(&query_plugin_msg)?,
         }))?;
+    
+    // check if plugin is enable
+    if !plugin_info.enabled {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Plugin is disabled",
+        )))
+    }
 
     // TODO: query the contract info of the plugin_address and check if the checksum is the same
 
@@ -387,19 +392,24 @@ pub fn unregister_plugin(
         }
     }
 
-    // call plugin manager to check if this plugin require unregister action
-    let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
-    let query_forced_unreg_msg = PMQueryMsg::ForcedUnregister { 
-        address: plugin.contract_address.to_string()  
-    };
-    let is_forced: bool = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: plugin_manager_addr.to_string(),
-        msg: to_json_binary(&query_forced_unreg_msg)?,
-    })).unwrap_or(false);
-
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    if is_forced{
+    // call plugin manager to check if this plugin is enabled
+    let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
+    let query_plugin_msg = PMQueryMsg::PluginInfo {
+        address: plugin_address.to_string(),
+    };
+    let plugin_info : Result<PluginResponse, StdError> =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: plugin_manager_addr.to_string(),
+            msg: to_json_binary(&query_plugin_msg)?,
+        }));
+    
+    // if query error or plugin is diabled, just return
+    // else call unregister message
+    if plugin_info.is_err() || !plugin_info.unwrap().enabled {
+        return Ok(Response::new().add_attribute("action", "unregister_plugin"))
+    } else{
         // call unregister in the plugin contract
         let unregister_msg = CosmosMsg::Wasm(wasm_execute(
             plugin_address.as_str(),
@@ -407,22 +417,8 @@ pub fn unregister_plugin(
             vec![],
         )?);
 
-        Ok(Response::new().add_message(unregister_msg))
-    }else{
-        // call unregister in the plugin contract
-        // ignore call response
-        let unregister_msg = SubMsg {
-            msg: wasm_execute(
-                plugin_address.as_str(),
-                &PyxisPluginExecuteMsg::Unregister {},
-                vec![],
-            )?.into(),
-            id: UNREGISTER_PLUGIN_REPLY_ID,
-            gas_limit: None,
-            reply_on: ReplyOn::Always
-        };
-
-        Ok(Response::new().add_submessage(unregister_msg))
+        return Ok(Response::new().add_attribute("action", "unregister_plugin")
+            .add_message(unregister_msg));
     }
 }
 

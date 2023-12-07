@@ -77,7 +77,7 @@ pub fn execute(
                 code_id: 1,
                 address: plugin_address.clone(),
                 checksum: "checksum".to_string(),
-                forced_unregister: true,
+                enabled: true,
             };
             PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
             Ok(Response::new().add_attributes(vec![
@@ -92,15 +92,15 @@ pub fn execute(
                 ("plugin_address", plugin_address.to_string().as_str()),
             ]))
         }
-        ExecuteMsg::UpdatePlugin { plugin_address, forced_unregister } => {
+        ExecuteMsg::UpdatePlugin { plugin_address, enabled } => {
             let mut plugin = PLUGINS.load(deps.storage, &plugin_address.to_string())?;
-            plugin.forced_unregister = forced_unregister;
+            plugin.enabled = enabled;
             PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
 
             Ok(Response::new().add_attributes(vec![
                 ("action", "update_plugin"),
                 ("plugin_address", &plugin_address.to_string()),
-                ("forced_unregister", &forced_unregister.to_string())
+                ("enabled", &enabled.to_string())
             ]))
         }
     }
@@ -118,11 +118,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 plugin_type: plugin.plugin_type,
                 version: plugin.version,
                 address: plugin.address.to_string(),
+                enabled: plugin.enabled
             })
-        },
-        QueryMsg::ForcedUnregister { address } => {
-            let plugin = PLUGINS.load(deps.storage, &address)?;
-            to_json_binary(&plugin.forced_unregister)
         }
     }
 }

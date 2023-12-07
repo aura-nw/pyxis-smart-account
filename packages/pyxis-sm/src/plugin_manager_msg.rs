@@ -6,9 +6,6 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 pub enum QueryMsg {
     #[returns(PluginResponse)]
     PluginInfo { address: String },
-
-    #[returns(bool)]
-    ForcedUnregister { address: String },
 }
 
 #[cw_serde]
@@ -23,4 +20,5 @@ pub struct PluginResponse {
     pub plugin_type: PluginType,
     pub version: String,
     pub address: String,
+    pub enabled: bool,
 }

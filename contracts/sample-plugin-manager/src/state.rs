@@ -14,7 +14,7 @@ pub struct Plugin {
     pub version: String,
     pub address: Addr,
     pub checksum: String,
-    pub forced_unregister: bool,
+    pub enabled: bool,
 }
 
 pub const PLUGINS: Map<&str, Plugin> = Map::new("plugins");
