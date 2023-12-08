@@ -87,18 +87,19 @@ pub fn execute(
             ]))
         }
         ExecuteMsg::UpdatePlugin {
-            plugin_address,
-            enabled,
+            plugin_info,
         } => {
-            let mut plugin = PLUGINS.load(deps.storage, &plugin_address.to_string())?;
-            plugin.enabled = enabled;
-            PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
+            if !PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Plugin not found",
+                )));
+            }
 
-            Ok(Response::new().add_attributes(vec![
-                ("action", "update_plugin"),
-                ("plugin_address", &plugin_address.to_string()),
-                ("enabled", &enabled.to_string()),
-            ]))
+            validate_plugin(deps.as_ref(), &plugin_info)?;
+
+            // just save it
+            PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
+            Ok(Response::new().add_attribute("action", "update_plugin"))
         }
     }
 }

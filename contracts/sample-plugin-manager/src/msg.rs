@@ -19,8 +19,7 @@ pub enum ExecuteMsg {
         plugin_address: Addr,
     },
     UpdatePlugin {
-        plugin_address: Addr,
-        enabled: bool,
+        plugin_info: Plugin,
     },
 }
 
