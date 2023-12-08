@@ -1,3 +1,2 @@
 #[cfg(test)]
-mod unit_tests {
-}
+mod unit_tests {}

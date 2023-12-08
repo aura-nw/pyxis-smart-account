@@ -56,10 +56,10 @@ pub fn execute(
     match msg {
         PyxisPluginExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         PyxisPluginExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
-        PyxisPluginExecuteMsg::PreExecute { 
-            msgs, 
+        PyxisPluginExecuteMsg::PreExecute {
+            msgs,
             call_info,
-            is_authz 
+            is_authz,
         } => handle_pre_execute(deps, env, info, msgs, call_info, is_authz),
         PyxisPluginExecuteMsg::AfterExecute { .. } => Ok(Response::new()),
     }
@@ -114,7 +114,7 @@ pub fn handle_pre_execute(
     info: MessageInfo,
     _msgs: Vec<SdkMsg>,
     _call_info: CallInfo,
-    _is_authz: bool
+    _is_authz: bool,
 ) -> Result<Response, ContractError> {
     // load config of sender
     let user_config = USER_CONFIGS.load(deps.storage, &info.sender).unwrap();

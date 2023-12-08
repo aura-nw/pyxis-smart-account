@@ -27,7 +27,7 @@ impl LimitPeriodic {
 #[cw_serde]
 pub enum Limit {
     PerTransaction(LimitPerTransaction),
-    Periodic(LimitPeriodic)
+    Periodic(LimitPeriodic),
 }
 
 pub const LIMITS: Map<&Addr, Vec<Limit>> = Map::new("limits");

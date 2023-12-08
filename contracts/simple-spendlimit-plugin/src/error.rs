@@ -19,19 +19,19 @@ pub enum ContractError {
     OutOfRange {},
 
     #[error("Reach transaction spend limit")]
-    ReachTransactionSpendLimit { 
+    ReachTransactionSpendLimit {
         denom: String,
-        limit: Uint128,  
-        using: Uint128
+        limit: Uint128,
+        using: Uint128,
     },
 
     #[error("Reach periodic spend limit")]
-    ReachPeriodicSpendLimit { 
+    ReachPeriodicSpendLimit {
         denom: String,
         limit: Uint128,
         begin_period: Uint64,
-        periodic: Uint64,  
-        using: Uint128
+        periodic: Uint64,
+        using: Uint128,
     },
 
     #[error("Custom Error val: {val:?}")]

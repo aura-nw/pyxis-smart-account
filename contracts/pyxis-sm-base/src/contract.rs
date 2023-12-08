@@ -1,17 +1,17 @@
 use std::vec;
 
-use cosmos_sdk_proto::traits::{TypeUrl, Message};
+use cosmos_sdk_proto::traits::{Message, TypeUrl};
 use cosmwasm_std::{to_json_binary, CosmosMsg, StdError};
 
+use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
     StdResult, WasmQuery,
 };
-use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
-use serde_json_wasm::de::Error;
 use cw2::set_contract_version;
+use serde_json_wasm::de::Error;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -80,25 +80,26 @@ pub fn execute(
         } => register_plugin(deps, env, info, plugin_address, checksum, config),
         ExecuteMsg::UnregisterPlugin { plugin_address } => {
             unregister_plugin(deps, env, info, plugin_address)
-        },
-        ExecuteMsg::UpdatePlugin { plugin_address, status } => {
-            update_plugin(deps, env, info, plugin_address, status)
         }
+        ExecuteMsg::UpdatePlugin {
+            plugin_address,
+            status,
+        } => update_plugin(deps, env, info, plugin_address, status),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn sudo(deps: DepsMut, env: Env, msg: PyxisSudoMsg) -> Result<Response, ContractError> {
     match msg {
-        PyxisSudoMsg::PreExecute { 
-            msgs, 
-            call_info, 
-            is_authz 
+        PyxisSudoMsg::PreExecute {
+            msgs,
+            call_info,
+            is_authz,
         } => pre_execute(deps, env, msgs, call_info, is_authz),
-        PyxisSudoMsg::AfterExecute { 
-            msgs, 
-            call_info, 
-            is_authz 
+        PyxisSudoMsg::AfterExecute {
+            msgs,
+            call_info,
+            is_authz,
         } => after_execute(deps, env, msgs, call_info, is_authz),
         PyxisSudoMsg::Recover {
             caller,
@@ -122,7 +123,7 @@ pub fn pre_execute(
     // make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
-        if msg.type_url != MsgExecuteContract::TYPE_URL{
+        if msg.type_url != MsgExecuteContract::TYPE_URL {
             continue;
         }
 
@@ -130,10 +131,11 @@ pub fn pre_execute(
         if msg_exec.contract == env.contract.address.to_string() {
             // execute call to this smart-account contract must be
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
-            let msg_raw: Result<ExecuteMsg, Error> = serde_json_wasm::from_slice(msg_exec.msg.as_slice());
+            let msg_raw: Result<ExecuteMsg, Error> =
+                serde_json_wasm::from_slice(msg_exec.msg.as_slice());
             if msg_raw.is_err() {
                 // should never return err in `pre_execute`
-                // if not a message of type `ExecuteMsg` return 
+                // if not a message of type `ExecuteMsg` return
                 // in this situation, there will be no need to log error here as it will eventually fail when executing tx
                 return Ok(Response::new().add_attribute("action", "pre_execute"));
             }
@@ -141,8 +143,11 @@ pub fn pre_execute(
             match msg {
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
-                },
-                ExecuteMsg::UpdatePlugin { plugin_address, status: _ } => {
+                }
+                ExecuteMsg::UpdatePlugin {
+                    plugin_address,
+                    status: _,
+                } => {
                     disable_plugins.push(plugin_address);
                 }
                 _ => {}
@@ -155,8 +160,11 @@ pub fn pre_execute(
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
         .filter(|(_, plugin)| {
-            plugin.status == PluginStatus::Active && plugin.plugin_type != PluginType::Recovery
-            && !disable_plugins.iter().any(|addr| addr == &plugin.contract_address)
+            plugin.status == PluginStatus::Active
+                && plugin.plugin_type != PluginType::Recovery
+                && !disable_plugins
+                    .iter()
+                    .any(|addr| addr == &plugin.contract_address)
         })
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
@@ -165,7 +173,7 @@ pub fn pre_execute(
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
-                        is_authz
+                        is_authz,
                     },
                     vec![],
                 )
@@ -173,9 +181,10 @@ pub fn pre_execute(
             )
         })
         .collect::<Vec<CosmosMsg>>();
-        
-    Ok(Response::new().add_attribute("action", "pre_execute")
-    .add_messages(pre_execute_msgs))
+
+    Ok(Response::new()
+        .add_attribute("action", "pre_execute")
+        .add_messages(pre_execute_msgs))
 }
 
 /// after_execute is called for every message after it is executed
@@ -186,14 +195,13 @@ pub fn after_execute(
     env: Env,
     msgs: Vec<SdkMsg>,
     call_info: CallInfo,
-    is_authz: bool
+    is_authz: bool,
 ) -> Result<Response, ContractError> {
-
     // if tx contains RegisterPlugin, UnregisterPlugin or UpdatePlugin messages
     // make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
-        if msg.type_url != MsgExecuteContract::TYPE_URL{
+        if msg.type_url != MsgExecuteContract::TYPE_URL {
             continue;
         }
 
@@ -204,13 +212,20 @@ pub fn after_execute(
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             let msg: ExecuteMsg = serde_json_wasm::from_slice(msg_exec.msg.as_slice()).unwrap();
             match msg {
-                ExecuteMsg::RegisterPlugin { plugin_address, checksum: _, config: _ } => {
+                ExecuteMsg::RegisterPlugin {
+                    plugin_address,
+                    checksum: _,
+                    config: _,
+                } => {
                     disable_plugins.push(plugin_address);
-                },
+                }
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
-                },
-                ExecuteMsg::UpdatePlugin { plugin_address, status: _ } => {
+                }
+                ExecuteMsg::UpdatePlugin {
+                    plugin_address,
+                    status: _,
+                } => {
                     disable_plugins.push(plugin_address);
                 }
             }
@@ -222,8 +237,11 @@ pub fn after_execute(
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
         .filter(|(_, plugin)| {
-            plugin.status == PluginStatus::Active && plugin.plugin_type != PluginType::Recovery
-            && !disable_plugins.iter().any(|addr| addr == &plugin.contract_address)
+            plugin.status == PluginStatus::Active
+                && plugin.plugin_type != PluginType::Recovery
+                && !disable_plugins
+                    .iter()
+                    .any(|addr| addr == &plugin.contract_address)
         })
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
@@ -232,7 +250,7 @@ pub fn after_execute(
                     &PyxisPluginExecuteMsg::AfterExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
-                        is_authz
+                        is_authz,
                     },
                     vec![],
                 )
@@ -241,8 +259,9 @@ pub fn after_execute(
         })
         .collect::<Vec<CosmosMsg>>();
 
-    Ok(Response::new().add_attribute("action", "after_execute")
-    .add_messages(after_execute_msgs))
+    Ok(Response::new()
+        .add_attribute("action", "after_execute")
+        .add_messages(after_execute_msgs))
 }
 
 /// handle_recover is called when a smart account is recovered (change owner)
@@ -295,8 +314,9 @@ pub fn handle_recover(
         "There should be only one recovery plugin"
     );
 
-    Ok(Response::new().add_attribute("action", "recover")
-    .add_messages(recover_msgs))
+    Ok(Response::new()
+        .add_attribute("action", "recover")
+        .add_messages(recover_msgs))
 }
 
 /// Register a plugin to this smart account
@@ -328,12 +348,12 @@ pub fn register_plugin(
             contract_addr: plugin_manager_addr.to_string(),
             msg: to_json_binary(&query_plugin_msg)?,
         }))?;
-    
+
     // check if plugin is enable
     if !plugin_info.enabled {
         return Err(ContractError::Std(StdError::generic_err(
             "Plugin is disabled",
-        )))
+        )));
     }
 
     // TODO: query the contract info of the plugin_address and check if the checksum is the same
@@ -373,8 +393,9 @@ pub fn register_plugin(
         vec![],
     )?);
 
-    Ok(Response::new().add_attribute("action", "register")
-    .add_message(register_msg))
+    Ok(Response::new()
+        .add_attribute("action", "register")
+        .add_message(register_msg))
 }
 
 /// Unregister a plugin from this smart account
@@ -403,17 +424,17 @@ pub fn unregister_plugin(
     let query_plugin_msg = PMQueryMsg::PluginInfo {
         address: plugin_address.to_string(),
     };
-    let plugin_info : Result<PluginResponse, StdError> =
+    let plugin_info: Result<PluginResponse, StdError> =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: plugin_manager_addr.to_string(),
             msg: to_json_binary(&query_plugin_msg)?,
         }));
-    
+
     // if query error or plugin is diabled, just return
     // else call unregister message
     if plugin_info.is_err() || !plugin_info.unwrap().enabled {
-        return Ok(Response::new().add_attribute("action", "unregister_plugin"))
-    } else{
+        return Ok(Response::new().add_attribute("action", "unregister_plugin"));
+    } else {
         // call unregister in the plugin contract
         let unregister_msg = CosmosMsg::Wasm(wasm_execute(
             plugin_address.as_str(),
@@ -421,7 +442,8 @@ pub fn unregister_plugin(
             vec![],
         )?);
 
-        return Ok(Response::new().add_attribute("action", "unregister_plugin")
+        return Ok(Response::new()
+            .add_attribute("action", "unregister_plugin")
             .add_message(unregister_msg));
     }
 }
@@ -431,15 +453,11 @@ fn update_plugin(
     _env: Env,
     _info: MessageInfo,
     plugin_address: Addr,
-    status: PluginStatus
+    status: PluginStatus,
 ) -> Result<Response, ContractError> {
-
     let mut plugin = PLUGINS.load(deps.storage, &plugin_address)?;
 
-    assert!(
-        plugin.status != status,
-        "Plugin status not change"
-    );
+    assert!(plugin.status != status, "Plugin status not change");
 
     match status {
         PluginStatus::Inactive => {
@@ -448,18 +466,18 @@ fn update_plugin(
             let query_plugin_msg = PMQueryMsg::PluginInfo {
                 address: plugin_address.to_string(),
             };
-            let plugin_info : Result<PluginResponse, StdError> =
+            let plugin_info: Result<PluginResponse, StdError> =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: plugin_manager_addr.to_string(),
                     msg: to_json_binary(&query_plugin_msg)?,
                 }));
-            
+
             if plugin_info.is_ok() && plugin_info.unwrap().enabled {
                 return Err(ContractError::Std(StdError::generic_err(
                     "Plugin is enabled, cannot deactivate",
-                )))
+                )));
             }
-        },
+        }
         _ => {}
     }
 

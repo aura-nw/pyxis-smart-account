@@ -1,13 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Addr,
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Plugin, PLUGINS, CONFIG, Config};
+use crate::state::{Config, Plugin, CONFIG, PLUGINS};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -25,7 +25,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
-        admin: Addr::unchecked(msg.admin)
+        admin: Addr::unchecked(msg.admin),
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -92,7 +92,10 @@ pub fn execute(
                 ("plugin_address", plugin_address.to_string().as_str()),
             ]))
         }
-        ExecuteMsg::UpdatePlugin { plugin_address, enabled } => {
+        ExecuteMsg::UpdatePlugin {
+            plugin_address,
+            enabled,
+        } => {
             let mut plugin = PLUGINS.load(deps.storage, &plugin_address.to_string())?;
             plugin.enabled = enabled;
             PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
@@ -100,7 +103,7 @@ pub fn execute(
             Ok(Response::new().add_attributes(vec![
                 ("action", "update_plugin"),
                 ("plugin_address", &plugin_address.to_string()),
-                ("enabled", &enabled.to_string())
+                ("enabled", &enabled.to_string()),
             ]))
         }
     }
@@ -118,7 +121,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 plugin_type: plugin.plugin_type,
                 version: plugin.version,
                 address: plugin.address.to_string(),
-                enabled: plugin.enabled
+                enabled: plugin.enabled,
             })
         }
     }

@@ -1,8 +1,5 @@
-use aura_test_tube::{
-    AuraTestApp, RunnerExecuteResult, Account,
-    Runner, SigningAccount
-};
 use aura_test_tube::init_local_smart_account;
+use aura_test_tube::{Account, AuraTestApp, Runner, RunnerExecuteResult, SigningAccount};
 use cosmos_sdk_proto::cosmos::bank::v1beta1::{MsgSend, MsgSendResponse};
 use cosmos_sdk_proto::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse};
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
@@ -68,8 +65,8 @@ fn test_deploy() {
 
     let sm_address = setup_smart_account(&mut app, &deployer, &code_ids, &contracts);
 
-    let smartaccount = init_local_smart_account(sm_address.to_string(), deployer.private_key())
-        .unwrap();
+    let smartaccount =
+        init_local_smart_account(sm_address.to_string(), deployer.private_key()).unwrap();
 
     // let send_res: RunnerExecuteResult<MsgSendResponse> = app.execute(
     //     MsgSend {

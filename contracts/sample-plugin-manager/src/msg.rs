@@ -22,7 +22,7 @@ pub enum ExecuteMsg {
     UpdatePlugin {
         plugin_address: Addr,
         enabled: bool,
-    }
+    },
 }
 
 /// Message type for `migrate` entry_point

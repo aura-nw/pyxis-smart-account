@@ -1,6 +1,8 @@
 use crate::msg::InstantiateMsg;
 use aura_proto::types::smartaccount::v1beta1::{CodeID, Params};
+use aura_test_tube::init_local_smart_account;
 use aura_test_tube::SmartAccount;
+use aura_test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount};
 use aura_test_tube::{AuraTestApp, Wasm};
 use cosmos_sdk_proto::cosmos::bank::v1beta1::{MsgSend, MsgSendResponse};
 use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
@@ -12,8 +14,6 @@ use sample_plugin_manager::msg::{
     ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg,
 };
 use std::collections::HashMap;
-use aura_test_tube::{Account, Module, Runner, RunnerExecuteResult, SigningAccount};
-use aura_test_tube::init_local_smart_account;
 
 // since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
 pub const SM_ADDRESS: &str = "contract1";
@@ -157,8 +157,7 @@ pub fn setup_smart_account(
         user,
     );
 
-    let sa_acc = init_local_smart_account(sa_addr.clone(), user.private_key())
-        .unwrap();
+    let sa_acc = init_local_smart_account(sa_addr.clone(), user.private_key()).unwrap();
 
     let activate_res = smartaccount
         .activate_account(sm_code_id, salt, init_msg, pub_key, &sa_acc)
@@ -180,7 +179,7 @@ pub fn setup_contracts<'a>(
         .instantiate(
             *code_ids.get("sample_plugin_manager").unwrap(),
             &PluginManagerInstantiateMsg {
-                admin: deployer.address()
+                admin: deployer.address(),
             },
             None,
             Some("sample_plugin_manager"),

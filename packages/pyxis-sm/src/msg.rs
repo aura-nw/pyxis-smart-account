@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Binary};
+use cosmwasm_std::{Binary, Coin};
 
 #[cw_serde]
 pub struct CallInfo {

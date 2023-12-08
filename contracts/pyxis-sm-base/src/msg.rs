@@ -1,6 +1,6 @@
+use crate::state::PluginStatus;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use crate::state::PluginStatus;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
