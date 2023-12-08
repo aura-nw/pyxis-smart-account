@@ -1,13 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, 
+    StdError, QueryRequest, WasmQuery, ContractInfoResponse
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Config, Plugin, CONFIG, PLUGINS};
+use crate::state::{Config, CONFIG, PLUGINS, Plugin};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -66,22 +67,16 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::AllowPlugin {
-            plugin_address,
-            plugin_type,
+            plugin_info,
         } => {
+
+            validate_plugin(deps.as_ref(), &plugin_info)?;
+
             // just save it
-            let plugin = Plugin {
-                name: "sample plugin".to_string(),
-                plugin_type,
-                version: "0.1.0".to_string(),
-                code_id: 1,
-                address: plugin_address.clone(),
-                enabled: true,
-            };
-            PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
+            PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
             Ok(Response::new().add_attributes(vec![
                 ("action", "allow_plugin"),
-                ("plugin_address", plugin_address.to_string().as_str()),
+                ("plugin_address", plugin_info.address.to_string().as_str()),
             ]))
         }
         ExecuteMsg::DisallowPlugin { plugin_address } => {
@@ -106,6 +101,23 @@ pub fn execute(
             ]))
         }
     }
+}
+
+// validate plugin info
+// prevent front-run attack
+fn validate_plugin(deps: Deps, plugin_info: &Plugin) -> StdResult<()> {
+    // query plugin contract infor
+    let contract_info: ContractInfoResponse =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
+            contract_addr: plugin_info.address.to_string(),
+        }))?;
+    if contract_info.code_id != plugin_info.code_id {
+        return Err(StdError::generic_err(
+            "Invalid plugin code_id",
+        ));
+    }
+
+    Ok(())
 }
 
 /// Handling contract query

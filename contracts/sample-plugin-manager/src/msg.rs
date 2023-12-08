@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
-use pyxis_sm::plugin_manager_msg::PluginType;
 pub use pyxis_sm::plugin_manager_msg::QueryMsg;
+use crate::state::Plugin;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
@@ -13,8 +13,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     AllowPlugin {
-        plugin_address: Addr,
-        plugin_type: PluginType,
+        plugin_info: Plugin,
     },
     DisallowPlugin {
         plugin_address: Addr,
