@@ -13,7 +13,6 @@ pub struct Plugin {
     pub code_id: u64,
     pub version: String,
     pub address: Addr,
-    pub checksum: String,
     pub enabled: bool,
 }
 

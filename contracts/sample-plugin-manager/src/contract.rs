@@ -76,7 +76,6 @@ pub fn execute(
                 version: "0.1.0".to_string(),
                 code_id: 1,
                 address: plugin_address.clone(),
-                checksum: "checksum".to_string(),
                 enabled: true,
             };
             PLUGINS.save(deps.storage, &plugin_address.to_string(), &plugin)?;
