@@ -99,7 +99,7 @@ fn handle_after_execute(
     _is_authz: bool,
 ) -> Result<Response, ContractError> {
     // load sender's limits
-    let mut limits = load_limts(deps.storage, &info.sender)?;
+    let mut limits = load_limits(deps.storage, &info.sender)?;
 
     // get transfer balances of transaction
     let transfer_balances = get_transfer_balances(msgs)?;
@@ -206,7 +206,7 @@ fn handle_add_limit(
 ) -> Result<Response, ContractError> {
     validate_limit(&limit, env)?;
 
-    let mut limits = load_limts(deps.storage, &info.sender)?;
+    let mut limits = load_limits(deps.storage, &info.sender)?;
     limits.push(limit);
     LIMITS.save(deps.storage, &info.sender, &limits)?;
 
@@ -222,7 +222,7 @@ fn handle_update_limit(
 ) -> Result<Response, ContractError> {
     validate_limit(&limit, env)?;
 
-    let mut limits = load_limts(deps.storage, &info.sender)?;
+    let mut limits = load_limits(deps.storage, &info.sender)?;
 
     if index as usize >= limits.len() {
         return Err(ContractError::OutOfRange {});
@@ -243,7 +243,7 @@ fn handle_delete_limit(
     info: MessageInfo,
     index: u32,
 ) -> Result<Response, ContractError> {
-    let mut limits = load_limts(deps.storage, &info.sender)?;
+    let mut limits = load_limits(deps.storage, &info.sender)?;
 
     if index as usize >= limits.len() {
         return Err(ContractError::OutOfRange {});
@@ -257,7 +257,7 @@ fn handle_delete_limit(
         .add_attribute("index", index.to_string()))
 }
 
-fn load_limts(storage: &dyn Storage, sender: &Addr) -> Result<Vec<Limit>, ContractError> {
+fn load_limits(storage: &dyn Storage, sender: &Addr) -> Result<Vec<Limit>, ContractError> {
     let limits = LIMITS.may_load(storage, sender)?;
     if limits.is_none() {
         return Err(ContractError::AccountNotRegistered {});
