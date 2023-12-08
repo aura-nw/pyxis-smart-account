@@ -52,6 +52,7 @@ fn can_recover() {
     allow_plugin(
         &mut app,
         &contracts,
+        &code_ids,
         "recovery_plugin",
         PluginType::Recovery,
     );

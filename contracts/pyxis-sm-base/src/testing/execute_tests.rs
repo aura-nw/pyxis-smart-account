@@ -33,7 +33,7 @@ fn pre_execute_with_a_plugin_always_reject() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -67,7 +67,7 @@ fn pre_execute_and_plugin_approve() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -101,8 +101,8 @@ fn pre_execute_and_one_plugin_reject() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
-    allow_plugin(&mut app, &contracts, "plugin_2", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_2", PluginType::Other);
 
     // register plugin 1 to approve
     app.execute_contract(
@@ -168,7 +168,7 @@ fn after_execute_and_plugin_reject() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -202,7 +202,7 @@ fn after_execute_and_plugin_approve() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(

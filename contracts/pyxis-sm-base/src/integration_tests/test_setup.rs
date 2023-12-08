@@ -13,6 +13,7 @@ use sample_plugin::msg::InstantiateMsg as PluginInstantiateMsg;
 use sample_plugin_manager::msg::{
     ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg,
 };
+use sample_plugin_manager::state::Plugin;
 use std::collections::HashMap;
 
 // since we haven't been able to use instantiate2 with cw_multi_test, we need to use a hardcoded address
@@ -237,6 +238,7 @@ pub fn allow_plugin(
     app: &mut AuraTestApp,
     deployer: &SigningAccount,
     contracts: &HashMap<String, Addr>,
+    code_ids: &HashMap<&str, u64>,
     plugin_name: &str,
     plugin_type: PluginType,
 ) {
@@ -246,8 +248,14 @@ pub fn allow_plugin(
     wasm.execute(
         &contracts.get("plugin_manager").unwrap().to_string(),
         &PluginManagerExecuteMsg::AllowPlugin {
-            plugin_address: contracts.get(plugin_name).unwrap().clone(),
-            plugin_type,
+            plugin_info: Plugin {
+                name: plugin_name.to_string(),
+                plugin_type,
+                address: contracts.get(plugin_name).unwrap().clone(),
+                code_id: *code_ids.get(plugin_name).unwrap(),
+                version: "v0.1.0".to_string(),
+                enabled: true,
+            }
         },
         &vec![],
         deployer,

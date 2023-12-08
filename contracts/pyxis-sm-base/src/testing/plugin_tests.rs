@@ -47,7 +47,7 @@ fn register_plugin() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
@@ -69,7 +69,7 @@ fn cannot_register_same_plugin() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
@@ -104,8 +104,8 @@ fn can_register_two_plugins() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
-    allow_plugin(&mut app, &contracts, "plugin_2", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_2", PluginType::Other);
 
     app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
