@@ -1,14 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, 
-    StdError, QueryRequest, WasmQuery, ContractInfoResponse
+    to_json_binary, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Reply, Response, StdError, StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Config, CONFIG, PLUGINS, Plugin};
+use crate::state::{Config, Plugin, CONFIG, PLUGINS};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -66,10 +66,7 @@ pub fn execute(
     }
 
     match msg {
-        ExecuteMsg::AllowPlugin {
-            plugin_info,
-        } => {
-
+        ExecuteMsg::AllowPlugin { plugin_info } => {
             validate_plugin(deps.as_ref(), &plugin_info)?;
 
             // just save it
@@ -86,9 +83,7 @@ pub fn execute(
                 ("plugin_address", plugin_address.to_string().as_str()),
             ]))
         }
-        ExecuteMsg::UpdatePlugin {
-            plugin_info,
-        } => {
+        ExecuteMsg::UpdatePlugin { plugin_info } => {
             if !PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
                 return Err(ContractError::Std(StdError::generic_err(
                     "Plugin not found",
@@ -109,13 +104,12 @@ pub fn execute(
 fn validate_plugin(deps: Deps, plugin_info: &Plugin) -> StdResult<()> {
     // query plugin contract infor
     let contract_info: ContractInfoResponse =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
-            contract_addr: plugin_info.address.to_string(),
-        }))?;
+        deps.querier
+            .query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
+                contract_addr: plugin_info.address.to_string(),
+            }))?;
     if contract_info.code_id != plugin_info.code_id {
-        return Err(StdError::generic_err(
-            "Invalid plugin code_id",
-        ));
+        return Err(StdError::generic_err("Invalid plugin code_id"));
     }
 
     Ok(())
