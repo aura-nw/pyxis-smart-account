@@ -34,7 +34,7 @@ fn cannot_recover_when_not_set_plugin() {
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::Recover {
             caller: "recoverer".to_string(),
-            pubkey: vec![],
+            pub_key: vec![],
             credentials: vec![],
         },
         &vec![],
@@ -80,7 +80,7 @@ fn can_recover() {
         Addr::unchecked(SM_ADDRESS),
         &PyxisSudoMsg::Recover {
             caller: "incorrect_caller".to_string(),
-            pubkey: vec![],
+            pub_key: vec![],
             credentials: vec![],
         },
     );
@@ -91,7 +91,7 @@ fn can_recover() {
         Addr::unchecked(SM_ADDRESS),
         &PyxisSudoMsg::Recover {
             caller: "recoverer".to_string(),
-            pubkey: vec![],
+            pub_key: vec![],
             credentials: vec![],
         },
     );

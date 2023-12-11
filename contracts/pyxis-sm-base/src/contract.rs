@@ -103,9 +103,9 @@ pub fn sudo(deps: DepsMut, env: Env, msg: PyxisSudoMsg) -> Result<Response, Cont
         } => after_execute(deps, env, msgs, call_info, is_authz),
         PyxisSudoMsg::Recover {
             caller,
-            pubkey,
+            pub_key,
             credentials,
-        } => handle_recover(deps, env, caller, pubkey, credentials),
+        } => handle_recover(deps, env, caller, pub_key, credentials),
     }
 }
 
@@ -272,7 +272,7 @@ pub fn handle_recover(
     deps: DepsMut,
     _env: Env,
     caller: String,
-    pubkey: Vec<u8>,
+    pub_key: Vec<u8>,
     credentials: Vec<u8>,
 ) -> Result<Response, ContractError> {
     // recover is only enabled after a recovery plugin is registered
@@ -299,7 +299,7 @@ pub fn handle_recover(
                     &plugin.contract_address,
                     &PyxisRecoveryPluginExecuteMsg::Recover {
                         caller: caller.clone(),
-                        pubkey: pubkey.clone(),
+                        pub_key: pub_key.clone(),
                         credentials: credentials.clone(),
                     },
                     vec![],

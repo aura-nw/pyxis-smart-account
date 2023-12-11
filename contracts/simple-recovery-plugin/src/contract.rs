@@ -59,9 +59,9 @@ pub fn execute(
         PyxisRecoveryPluginExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
         PyxisRecoveryPluginExecuteMsg::Recover {
             caller,
-            pubkey,
+            pub_key,
             credentials,
-        } => handle_recover(deps, env, info, caller, pubkey, credentials),
+        } => handle_recover(deps, env, info, caller, pub_key, credentials),
     }
 }
 
@@ -108,7 +108,7 @@ fn handle_recover(
     _env: Env,
     info: MessageInfo,
     caller: String,
-    _pubkey: Vec<u8>,
+    _pub_key: Vec<u8>,
     _credentials: Vec<u8>,
 ) -> Result<Response, ContractError> {
     // load config of sender

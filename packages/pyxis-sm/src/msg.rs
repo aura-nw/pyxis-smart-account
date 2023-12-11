@@ -43,7 +43,7 @@ pub enum PyxisSudoMsg {
     // recover is a base message which is called when a smart account is recovered (change owner)
     Recover {
         caller: String,
-        pubkey: Vec<u8>,
+        pub_key: Vec<u8>,
         credentials: Vec<u8>,
     },
 }
@@ -76,7 +76,7 @@ pub enum PyxisRecoveryPluginExecuteMsg {
     Unregister {},
     Recover {
         caller: String,
-        pubkey: Vec<u8>,
+        pub_key: Vec<u8>,
         credentials: Vec<u8>,
     },
 }
