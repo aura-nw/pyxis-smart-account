@@ -20,5 +20,6 @@ pub struct PluginResponse {
     pub plugin_type: PluginType,
     pub version: String,
     pub address: String,
+    pub code_id: u64,
     pub enabled: bool,
 }

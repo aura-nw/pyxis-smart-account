@@ -127,6 +127,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 plugin_type: plugin.plugin_type,
                 version: plugin.version,
                 address: plugin.address.to_string(),
+                code_id: plugin.code_id,
                 enabled: plugin.enabled,
             })
         }

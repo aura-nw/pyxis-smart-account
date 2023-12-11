@@ -8,7 +8,7 @@ use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
-    StdResult, WasmQuery,
+    StdResult, WasmQuery, ContractInfoResponse
 };
 use cw2::set_contract_version;
 use serde_json_wasm::de::Error;
@@ -353,7 +353,18 @@ pub fn register_plugin(
         )));
     }
 
-    // TODO: query the contract info of the plugin_address and check if the checksum is the same
+    // query plugin contract infor
+    let contract_info: ContractInfoResponse =
+        deps.querier
+            .query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
+                contract_addr: plugin_info.address.to_string(),
+            }))?;
+    // check if plugin contract not been migrated
+    if contract_info.code_id != plugin_info.code_id {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Invalid plugin code_id"
+        )));
+    }
 
     // add this plugin and its config to the storage
     PLUGINS.save(
