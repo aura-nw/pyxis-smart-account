@@ -42,7 +42,6 @@ fn pre_execute_with_a_plugin_always_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "reject".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -76,7 +75,6 @@ fn pre_execute_and_plugin_approve() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "approve".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -111,7 +109,6 @@ fn pre_execute_and_one_plugin_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "approve".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -124,7 +121,6 @@ fn pre_execute_and_one_plugin_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_2").unwrap().clone(),
             config: "reject".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -177,7 +173,6 @@ fn after_execute_and_plugin_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "reject".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -211,7 +206,6 @@ fn after_execute_and_plugin_approve() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "approve".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )

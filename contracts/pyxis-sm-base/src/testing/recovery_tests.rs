@@ -69,7 +69,6 @@ fn can_recover() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("recovery_plugin").unwrap().clone(),
             config: serde_json_wasm::to_string(&recovery_config).unwrap(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )

@@ -13,7 +13,6 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     RegisterPlugin {
         plugin_address: Addr,
-        checksum: String,
         config: String,
     },
     UnregisterPlugin {

@@ -33,7 +33,6 @@ fn cannot_register_plugin_without_plugin_manager() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -55,7 +54,6 @@ fn register_plugin() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -77,7 +75,6 @@ fn cannot_register_same_plugin() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -90,7 +87,6 @@ fn cannot_register_same_plugin() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -112,7 +108,6 @@ fn can_register_two_plugins() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
-            checksum: "checksum".to_string(),
             config: "config".to_string(),
         },
         &vec![],
@@ -124,7 +119,6 @@ fn can_register_two_plugins() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_2").unwrap().clone(),
-            checksum: "checksum".to_string(),
             config: "config".to_string(),
         },
         &vec![],

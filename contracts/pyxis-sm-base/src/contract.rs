@@ -75,9 +75,8 @@ pub fn execute(
     match msg {
         ExecuteMsg::RegisterPlugin {
             plugin_address,
-            checksum,
             config,
-        } => register_plugin(deps, env, info, plugin_address, checksum, config),
+        } => register_plugin(deps, env, info, plugin_address, config),
         ExecuteMsg::UnregisterPlugin { plugin_address } => {
             unregister_plugin(deps, env, info, plugin_address)
         }
@@ -214,7 +213,6 @@ pub fn after_execute(
             match msg {
                 ExecuteMsg::RegisterPlugin {
                     plugin_address,
-                    checksum: _,
                     config: _,
                 } => {
                     disable_plugins.push(plugin_address);
@@ -326,7 +324,6 @@ pub fn register_plugin(
     _env: Env,
     _info: MessageInfo,
     plugin_address: Addr,
-    checksum: String,
     config: String,
 ) -> Result<Response, ContractError> {
     // check if this plugin has already been registered
@@ -366,7 +363,6 @@ pub fn register_plugin(
             name: plugin_info.name,
             plugin_type: plugin_info.plugin_type.clone(),
             contract_address: plugin_address.clone(),
-            checksum,
             status: PluginStatus::Active,
             config: config.clone(),
         },
