@@ -67,6 +67,14 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::AllowPlugin { plugin_info } => {
+            // check if this plugin has already been allowed
+            // for now we will throw error
+            if PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Plugin is already allowed",
+                )));
+            }
+
             validate_plugin(deps.as_ref(), &plugin_info)?;
 
             // just save it
