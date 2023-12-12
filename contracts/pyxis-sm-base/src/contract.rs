@@ -270,8 +270,8 @@ pub fn handle_recover(
     deps: DepsMut,
     _env: Env,
     caller: String,
-    pub_key: Vec<u8>,
-    credentials: Vec<u8>,
+    pub_key: Binary,
+    credentials: Binary,
 ) -> Result<Response, ContractError> {
     // recover is only enabled after a recovery plugin is registered
     // we also limit the recovery plugin to only one

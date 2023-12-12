@@ -108,8 +108,8 @@ fn handle_recover(
     _env: Env,
     info: MessageInfo,
     caller: String,
-    _pub_key: Vec<u8>,
-    _credentials: Vec<u8>,
+    _pub_key: Binary,
+    _credentials: Binary,
 ) -> Result<Response, ContractError> {
     // load config of sender
     let config = CONFIG_MAP.load(deps.storage, &info.sender)?;
