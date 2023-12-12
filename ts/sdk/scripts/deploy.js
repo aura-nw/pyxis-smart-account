@@ -141,6 +141,118 @@ async function getSignData(sm_address) {
   return nextSignData
 }
 
+async function registerPlugin(signer, smartaccount, plugin, recoverer) {
+  const user = (await account.wallet.getAccounts())[0];
+
+  // register recovery plugin
+  const registerPluginMsg = {
+    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+    value: {
+      sender: signer,
+      contract: smartaccount,
+      msg: toUtf8(JSON.stringify({
+        register_plugin: {
+          plugin_address: plugin,
+          config: `{\"smart_account_address\":\"${smartaccount}\",\"recover_address\":\"${recoverer}\"}`, // config required by simple-recovery-plugin
+        },
+      })),
+      funds: [],
+    }
+  };
+
+  signerData = await getSignData(signer);
+  console.log('Signer data', signerData);
+
+
+  account.client.registry.register("/cosmwasm.wasm.v1.MsgExecuteContract", MsgExecuteContract);
+  signedTx = await account.client.sign(
+    user.address,
+    [registerPluginMsg],
+    calculateFee(400000, '0.025utaura'),
+    'activate smart account',
+    signerData,
+  );
+
+  console.log('Signed tx', signedTx);
+
+  tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
+  res = await account.client.broadcastTx(tx);
+  console.log(res);
+}
+
+async function unregisterPlugin(signer, smartaccount, plugin) {
+  const user = (await account.wallet.getAccounts())[0];
+
+  // register recovery plugin
+  const unRegisterPluginMsg = {
+    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+    value: {
+      sender: signer,
+      contract: smartaccount,
+      msg: toUtf8(JSON.stringify({
+        unregister_plugin: {
+          plugin_address: plugin,
+        },
+      })),
+      funds: [],
+    }
+  };
+
+  signerData = await getSignData(signer);
+  console.log('Signer data', signerData);
+
+  signedTx = await account.client.sign(
+    user.address,
+    [unRegisterPluginMsg],
+    calculateFee(400000, '0.025utaura'),
+    'activate smart account',
+    signerData,
+  );
+
+  console.log('Signed tx', signedTx);
+
+  tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
+  res = await account.client.broadcastTx(tx);
+  console.log(res);
+}
+
+async function recoverPubkey(signer, smartaccount, new_pk) {
+  const user = (await account.wallet.getAccounts())[0];
+
+  // call recover message to set new pubkey for smart-account
+  const recoverMsg = {
+    typeUrl: "/aura.smartaccount.v1beta1.MsgRecover",
+    value: {
+      creator: signer, // signer of this tx
+      address: smartaccount, // smart-account address
+      publicKey: { // new pubkey
+        typeUrl: '/cosmos.crypto.secp256k1.PubKey',
+        value: new_pk
+      },
+      credentials:""
+    }
+  };
+
+  signerData = await getSignData(signer);
+  console.log('Signer data', signerData);
+
+
+  account.client.registry.register("/aura.smartaccount.v1beta1.MsgRecover", MsgRecover);
+  signedTx = await account.client.sign(
+    user.address,
+    [recoverMsg],
+    calculateFee(400000, '0.025utaura'),
+    'activate smart account',
+    signerData,
+  );
+
+  console.log('Signed tx', signedTx);
+
+  tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
+  res = await account.client.broadcastTx(tx);
+  console.log(res);
+}
+
 async function setupSmartAccount() {
   const pluginManagerInfo = contractInfos.find((info) => info.name === 'plugin-manager');
   const user = (await account.wallet.getAccounts())[0];
@@ -217,7 +329,6 @@ async function setupSmartAccount() {
 
   console.log('Signed tx', signedTx);
 
-
   let tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
   let res = await account.client.broadcastTx(tx);
   console.log(res);
@@ -225,41 +336,8 @@ async function setupSmartAccount() {
 
   /*--------------------------- Register recovery plugin ---------------------------*/
   const RecoveryPluginInfo = contractInfos.find((info) => info.name === 'simple-recovery-plugin');
-  // register recovery plugin
-  const registerPluginMsg = {
-    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-    value: {
-      sender: sm_address,
-      contract: sm_address,
-      msg: toUtf8(JSON.stringify({
-        register_plugin: {
-          plugin_address: RecoveryPluginInfo.contractAddress,
-          config: `{\"smart_account_address\":\"${sm_address}\",\"recover_address\":\"${sm_address}\"}`, // config required by simple-recovery-plugin
-        },
-      })),
-      funds: [],
-    }
-  };
-
-  signerData = await getSignData(sm_address);
-  console.log('Signer data', signerData);
-
-
-  account.client.registry.register("/cosmwasm.wasm.v1.MsgExecuteContract", MsgExecuteContract);
-  signedTx = await account.client.sign(
-    user.address,
-    [registerPluginMsg],
-    calculateFee(400000, '0.025utaura'),
-    'activate smart account',
-    signerData,
-  );
-
-  console.log('Signed tx', signedTx);
-
-  tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
-  res = await account.client.broadcastTx(tx);
-  console.log(res);
-
+  // only smartaccount has the right to change it's pubkey
+  await registerPlugin(sm_address, sm_address, RecoveryPluginInfo.contractAddress, sm_address);
 
   /*--------------------------- Set new pubkey ---------------------------*/
   // new pubkey of account
@@ -273,76 +351,17 @@ async function setupSmartAccount() {
     ).finish(),
   );
   
-  // call recover message to set new pubkey for smart-account
-  const recoverMsg = {
-    typeUrl: "/aura.smartaccount.v1beta1.MsgRecover",
-    value: {
-      creator: sm_address, // signer of this tx
-      address: sm_address, // smart-account address
-      publicKey: { // new pubkey
-        typeUrl: '/cosmos.crypto.secp256k1.PubKey',
-        value: new_pk
-      },
-      credentials:""
-    }
-  };
-
-  signerData = await getSignData(sm_address);
-  console.log('Signer data', signerData);
-
-
-  account.client.registry.register("/aura.smartaccount.v1beta1.MsgRecover", MsgRecover);
-  signedTx = await account.client.sign(
-    user.address,
-    [recoverMsg],
-    calculateFee(400000, '0.025utaura'),
-    'activate smart account',
-    signerData,
-  );
-
-  console.log('Signed tx', signedTx);
-
-  tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
-  res = await account.client.broadcastTx(tx);
-  console.log(res);
+  await recoverPubkey(sm_address, sm_address, new_pk);
    
   // from now
-  // use private key generated from mnemonic 
-  // "era attitude lucky six physical elite melt industry space motion quit shallow under dust present cross heavy wrist sweet total gravity duck twist wine"
+  // use private key generated from the above mnemonic 
   // to sign smart-acount tx
 
   /*--------------------------- Unregister recovery plugin ---------------------------*/
-  // register recovery plugin
-  const unRegisterPluginMsg = {
-    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-    value: {
-      sender: sm_address,
-      contract: sm_address,
-      msg: toUtf8(JSON.stringify({
-        unregister_plugin: {
-          plugin_address: RecoveryPluginInfo.contractAddress,
-        },
-      })),
-      funds: [],
-    }
-  };
+  // unregister recovery plugin
+  await unregisterPlugin(sm_address, sm_address, RecoveryPluginInfo.contractAddress, sm_address)
 
-  signerData = await getSignData(sm_address);
-  console.log('Signer data', signerData);
-
-  signedTx = await account.client.sign(
-    user.address,
-    [unRegisterPluginMsg],
-    calculateFee(400000, '0.025utaura'),
-    'activate smart account',
-    signerData,
-  );
-
-  console.log('Signed tx', signedTx);
-
-  tx = Uint8Array.from(TxRaw.encode(signedTx).finish());
-  res = await account.client.broadcastTx(tx);
-  console.log(res);
+  // from now smartaccount cannot use recovery method unless register again
 }
 
 
