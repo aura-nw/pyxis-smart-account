@@ -22,7 +22,7 @@ pub enum ContractError {
     ReachTransactionSpendLimit {
         denom: String,
         limit: Uint128,
-        using: Uint128,
+        spent_amount: Uint128,
     },
 
     #[error("Reach periodic spend limit")]
@@ -31,7 +31,7 @@ pub enum ContractError {
         limit: Uint128,
         begin_period: Uint64,
         periodic: Uint64,
-        using: Uint128,
+        spent_amount: Uint128,
     },
 
     #[error("Custom Error val: {val:?}")]

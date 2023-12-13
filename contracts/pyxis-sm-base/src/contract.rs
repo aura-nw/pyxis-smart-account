@@ -130,6 +130,12 @@ pub fn pre_execute(
         if msg_exec.contract == env.contract.address.to_string() {
             // execute call to this smart-account contract must be
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
+            // only smart-account owner can execute those msgs
+            // error will be thrown at `after_execute` handler
+            if is_authz {
+                return Ok(Response::new().add_attribute("action", "pre_execute"));
+            }
+        
             let msg_raw: Result<ExecuteMsg, Error> =
                 serde_json_wasm::from_slice(msg_exec.msg.as_slice());
             if msg_raw.is_err() {
@@ -205,10 +211,16 @@ pub fn after_execute(
         }
 
         let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
-
         if msg_exec.contract == env.contract.address.to_string() {
             // execute call to this smart-account contract must be
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
+            // only smart-account owner can execute those msgs
+            if is_authz {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Unauthorization",
+                )));
+            }
+
             let msg: ExecuteMsg = serde_json_wasm::from_slice(msg_exec.msg.as_slice()).unwrap();
             match msg {
                 ExecuteMsg::RegisterPlugin {

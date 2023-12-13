@@ -120,7 +120,7 @@ fn handle_after_execute(
                         return Err(ContractError::ReachTransactionSpendLimit {
                             denom: l.limit.denom.clone(),
                             limit: l.limit.amount,
-                            using: item.amount,
+                            spent_amount: item.amount,
                         });
                     }
                 }
@@ -133,31 +133,28 @@ fn handle_after_execute(
                     l.used = Uint128::zero();
 
                     // set to new begin period
-                    l.begin_period += (block_time - l.begin_period)
-                        .checked_div_floor((l.periodic, Uint64::one()))
-                        .unwrap()
-                        .checked_mul(l.periodic)
-                        .unwrap();
+                    l.begin_period = block_time - (block_time - l.begin_period)
+                                    .checked_rem(l.periodic).unwrap()
                 }
 
                 if let Some(item) = transfer_balances
                     .iter()
                     .find(|coin| coin.denom.eq(&l.limit.denom))
                 {
-                    let using = item.amount.checked_add(l.used).unwrap();
+                    let spent_amount = item.amount.checked_add(l.used).unwrap();
 
                     // transfer amount bigger than period limit
-                    if using > l.limit.amount {
+                    if spent_amount > l.limit.amount {
                         return Err(ContractError::ReachPeriodicSpendLimit {
                             denom: l.limit.denom.clone(),
                             limit: l.limit.amount,
                             begin_period: l.begin_period,
                             periodic: l.periodic,
-                            using,
+                            spent_amount,
                         });
                     }
 
-                    l.used = using;
+                    l.used = spent_amount;
                 }
             }
         }
