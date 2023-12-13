@@ -334,7 +334,7 @@ pub fn handle_recover(
 pub fn register_plugin(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     plugin_address: Addr,
     config: String,
 ) -> Result<Response, ContractError> {
@@ -409,7 +409,7 @@ pub fn register_plugin(
     let register_msg = CosmosMsg::Wasm(wasm_execute(
         plugin_address.as_str(),
         &PyxisPluginExecuteMsg::Register { config },
-        vec![],
+        info.funds,
     )?);
 
     Ok(Response::new()
@@ -422,7 +422,7 @@ pub fn register_plugin(
 pub fn unregister_plugin(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     plugin_address: Addr,
 ) -> Result<Response, ContractError> {
     let plugin = PLUGINS.load(deps.storage, &plugin_address)?;
@@ -458,7 +458,7 @@ pub fn unregister_plugin(
         let unregister_msg = CosmosMsg::Wasm(wasm_execute(
             plugin_address.as_str(),
             &PyxisPluginExecuteMsg::Unregister {},
-            vec![],
+            info.funds,
         )?);
 
         return Ok(Response::new()
