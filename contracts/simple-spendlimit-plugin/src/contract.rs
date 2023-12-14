@@ -133,8 +133,10 @@ fn handle_after_execute(
                     l.used = Uint128::zero();
 
                     // set to new begin period
-                    l.begin_period = block_time - (block_time - l.begin_period)
-                                    .checked_rem(l.periodic).unwrap()
+                    l.begin_period = block_time
+                        - (block_time - l.begin_period)
+                            .checked_rem(l.periodic)
+                            .unwrap()
                 }
 
                 if let Some(item) = transfer_balances
