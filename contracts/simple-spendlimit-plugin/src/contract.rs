@@ -269,6 +269,12 @@ fn validate_limit(limit: &Limit, env: Env) -> Result<(), ContractError> {
     match limit {
         Limit::PerTransaction(_) => {}
         Limit::Periodic(l) => {
+            if l.periodic.u64() == 0u64 {
+                return Err(ContractError::CustomError {
+                    val: String::from("zero time period"),
+                });
+            }
+
             if l.periodic.u64() > MAX_SEC_PERIODIC {
                 return Err(ContractError::CustomError {
                     val: String::from("period too large"),
