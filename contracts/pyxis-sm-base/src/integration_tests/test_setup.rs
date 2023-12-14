@@ -255,7 +255,7 @@ pub fn allow_plugin(
                 code_id: *code_ids.get(plugin_name).unwrap(),
                 version: "v0.1.0".to_string(),
                 enabled: true,
-            }
+            },
         },
         &vec![],
         deployer,

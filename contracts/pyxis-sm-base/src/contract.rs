@@ -1,14 +1,14 @@
 use std::vec;
 
-use cosmos_sdk_proto::traits::{Message, TypeUrl};
+use cosmos_sdk_proto::traits::{Message, Name};
 use cosmwasm_std::{to_json_binary, CosmosMsg, StdError};
 
 use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    wasm_execute, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
-    StdResult, WasmQuery, ContractInfoResponse
+    wasm_execute, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Reply, Response, StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
 use serde_json_wasm::de::Error;
@@ -122,7 +122,7 @@ pub fn pre_execute(
     // make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
-        if msg.type_url != MsgExecuteContract::TYPE_URL {
+        if msg.type_url != format!("/{}", MsgExecuteContract::full_name()) {
             continue;
         }
 
@@ -135,7 +135,7 @@ pub fn pre_execute(
             if is_authz {
                 return Ok(Response::new().add_attribute("action", "pre_execute"));
             }
-        
+
             let msg_raw: Result<ExecuteMsg, Error> =
                 serde_json_wasm::from_slice(msg_exec.msg.as_slice());
             if msg_raw.is_err() {
@@ -206,7 +206,7 @@ pub fn after_execute(
     // make sure those plugins are not called at this time
     let mut disable_plugins: Vec<Addr> = Vec::new();
     for msg in &msgs {
-        if msg.type_url != MsgExecuteContract::TYPE_URL {
+        if msg.type_url != format!("/{}", MsgExecuteContract::full_name()) {
             continue;
         }
 
@@ -216,9 +216,7 @@ pub fn after_execute(
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             // only smart-account owner can execute those msgs
             if is_authz {
-                return Err(ContractError::Std(StdError::generic_err(
-                    "Unauthorization",
-                )));
+                return Err(ContractError::Std(StdError::generic_err("Unauthorization")));
             }
 
             let msg: ExecuteMsg = serde_json_wasm::from_slice(msg_exec.msg.as_slice()).unwrap();
@@ -374,7 +372,7 @@ pub fn register_plugin(
     // check if plugin contract not been migrated
     if contract_info.code_id != plugin_info.code_id {
         return Err(ContractError::Std(StdError::generic_err(
-            "Invalid plugin code_id"
+            "Invalid plugin code_id",
         )));
     }
 
