@@ -1,7 +1,7 @@
 use std::vec;
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Binary};
 use cw_multi_test::Executor;
 use pyxis_sm::msg::PyxisSudoMsg;
 use pyxis_sm::plugin_manager_msg::PluginType;
@@ -34,8 +34,8 @@ fn cannot_recover_when_not_set_plugin() {
         contracts.get("smart_account").unwrap().clone(),
         &PyxisSudoMsg::Recover {
             caller: "recoverer".to_string(),
-            pubkey: vec![],
-            credentials: vec![],
+            pub_key: Binary::from([]),
+            credentials: Binary::from([]),
         },
         &vec![],
     );
@@ -52,6 +52,7 @@ fn can_recover() {
     allow_plugin(
         &mut app,
         &contracts,
+        &code_ids,
         "recovery_plugin",
         PluginType::Recovery,
     );
@@ -68,7 +69,6 @@ fn can_recover() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("recovery_plugin").unwrap().clone(),
             config: serde_json_wasm::to_string(&recovery_config).unwrap(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -79,8 +79,8 @@ fn can_recover() {
         Addr::unchecked(SM_ADDRESS),
         &PyxisSudoMsg::Recover {
             caller: "incorrect_caller".to_string(),
-            pubkey: vec![],
-            credentials: vec![],
+            pub_key: Binary::from([]),
+            credentials: Binary::from([]),
         },
     );
     assert!(response.is_err());
@@ -90,8 +90,8 @@ fn can_recover() {
         Addr::unchecked(SM_ADDRESS),
         &PyxisSudoMsg::Recover {
             caller: "recoverer".to_string(),
-            pubkey: vec![],
-            credentials: vec![],
+            pub_key: Binary::from([]),
+            credentials: Binary::from([]),
         },
     );
     println!("response: {:?}", response);

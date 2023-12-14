@@ -20,6 +20,7 @@ fn pre_execute_without_plugin() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);
@@ -32,7 +33,7 @@ fn pre_execute_with_a_plugin_always_reject() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -41,7 +42,6 @@ fn pre_execute_with_a_plugin_always_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "reject".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -53,6 +53,7 @@ fn pre_execute_with_a_plugin_always_reject() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);
@@ -65,7 +66,7 @@ fn pre_execute_and_plugin_approve() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -74,7 +75,6 @@ fn pre_execute_and_plugin_approve() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "approve".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -86,6 +86,7 @@ fn pre_execute_and_plugin_approve() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);
@@ -98,8 +99,8 @@ fn pre_execute_and_one_plugin_reject() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
-    allow_plugin(&mut app, &contracts, "plugin_2", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_2", PluginType::Other);
 
     // register plugin 1 to approve
     app.execute_contract(
@@ -108,7 +109,6 @@ fn pre_execute_and_one_plugin_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "approve".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -121,7 +121,6 @@ fn pre_execute_and_one_plugin_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_2").unwrap().clone(),
             config: "reject".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -133,6 +132,7 @@ fn pre_execute_and_one_plugin_reject() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);
@@ -151,6 +151,7 @@ fn after_execute_without_plugin_success() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);
@@ -163,7 +164,7 @@ fn after_execute_and_plugin_reject() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -172,7 +173,6 @@ fn after_execute_and_plugin_reject() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "reject".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -184,6 +184,7 @@ fn after_execute_and_plugin_reject() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);
@@ -196,7 +197,7 @@ fn after_execute_and_plugin_approve() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     // register plugin with smart account
     app.execute_contract(
@@ -205,7 +206,6 @@ fn after_execute_and_plugin_approve() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "approve".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     )
@@ -217,6 +217,7 @@ fn after_execute_and_plugin_approve() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
+            is_authz: false,
         },
     );
     println!("response: {:?}", response);

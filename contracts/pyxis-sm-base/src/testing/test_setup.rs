@@ -9,6 +9,7 @@ use sample_plugin::{
     },
     msg::InstantiateMsg as PluginInstantiateMsg,
 };
+use sample_plugin_manager::state::Plugin;
 use sample_plugin_manager::{
     contract::{
         execute as plugin_manager_execute, instantiate as plugin_manager_instantiate,
@@ -78,7 +79,9 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
     let plugin_manager_addr = app.instantiate_contract(
         *code_ids.get("sample_plugin_manager").unwrap(),
         Addr::unchecked(SM_ADDRESS),
-        &PluginManagerInstantiateMsg {},
+        &PluginManagerInstantiateMsg {
+            admin: SM_ADDRESS.to_string(),
+        },
         &vec![],
         "sample plugin manager 1",
         Some(SM_ADDRESS.to_string()),
@@ -138,6 +141,7 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
 pub fn allow_plugin(
     app: &mut App,
     contracts: &HashMap<String, Addr>,
+    code_ids: &HashMap<&str, u64>,
     plugin_name: &str,
     plugin_type: PluginType,
 ) {
@@ -147,8 +151,14 @@ pub fn allow_plugin(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("plugin_manager").unwrap().clone(),
         &PluginManagerExecuteMsg::AllowPlugin {
-            plugin_address: contracts.get(plugin_name).unwrap().clone(),
-            plugin_type,
+            plugin_info: Plugin {
+                name: plugin_name.to_string(),
+                plugin_type,
+                address: contracts.get(plugin_name).unwrap().clone(),
+                code_id: *code_ids.get(plugin_name).unwrap(),
+                version: "v0.1.0".to_string(),
+                enabled: true,
+            }
         },
         &vec![],
     )

@@ -33,7 +33,6 @@ fn cannot_register_plugin_without_plugin_manager() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -47,7 +46,7 @@ fn register_plugin() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
@@ -55,7 +54,6 @@ fn register_plugin() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -69,7 +67,7 @@ fn cannot_register_same_plugin() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
 
     let response = app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
@@ -77,7 +75,6 @@ fn cannot_register_same_plugin() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -90,7 +87,6 @@ fn cannot_register_same_plugin() {
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
             config: "config".to_string(),
-            checksum: "checksum".to_string(),
         },
         &vec![],
     );
@@ -104,15 +100,14 @@ fn can_register_two_plugins() {
 
     let contracts = setup_contracts(&mut app, &code_ids);
 
-    allow_plugin(&mut app, &contracts, "plugin_1", PluginType::Other);
-    allow_plugin(&mut app, &contracts, "plugin_2", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_1", PluginType::Other);
+    allow_plugin(&mut app, &contracts, &code_ids, "plugin_2", PluginType::Other);
 
     app.execute_contract(
         Addr::unchecked(SM_ADDRESS),
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_1").unwrap().clone(),
-            checksum: "checksum".to_string(),
             config: "config".to_string(),
         },
         &vec![],
@@ -124,7 +119,6 @@ fn can_register_two_plugins() {
         contracts.get("smart_account").unwrap().clone(),
         &ExecuteMsg::RegisterPlugin {
             plugin_address: contracts.get("plugin_2").unwrap().clone(),
-            checksum: "checksum".to_string(),
             config: "config".to_string(),
         },
         &vec![],

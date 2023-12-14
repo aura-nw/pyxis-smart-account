@@ -1,13 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Reply, Response, StdError, StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Plugin, PLUGINS};
+use crate::state::{Config, Plugin, CONFIG, PLUGINS};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -20,9 +21,14 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let config = Config {
+        admin: Addr::unchecked(msg.admin),
+    };
+    CONFIG.save(deps.storage, &config)?;
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
@@ -49,39 +55,72 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, C
 /// Handling contract execution
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
     match msg {
-        ExecuteMsg::AllowPlugin {
-            plugin_address,
-            plugin_type,
-        } => {
+        ExecuteMsg::AllowPlugin { plugin_info } => {
+            // check if this plugin has already been allowed
+            // for now we will throw error
+            if PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Plugin is already allowed",
+                )));
+            }
+
+            validate_plugin(deps.as_ref(), &plugin_info)?;
+
             // just save it
-            let plugin = Plugin {
-                name: "sample plugin".to_string(),
-                plugin_type: plugin_type,
-                version: "0.1.0".to_string(),
-                code_id: 1,
-                address: plugin_address.clone(),
-                checksum: "checksum".to_string(),
-            };
-            PLUGINS.save(_deps.storage, &plugin_address.to_string(), &plugin)?;
+            PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
             Ok(Response::new().add_attributes(vec![
                 ("action", "allow_plugin"),
-                ("plugin_address", plugin_address.to_string().as_str()),
+                ("plugin_address", plugin_info.address.to_string().as_str()),
             ]))
         }
         ExecuteMsg::DisallowPlugin { plugin_address } => {
-            PLUGINS.remove(_deps.storage, &plugin_address.to_string());
+            PLUGINS.remove(deps.storage, &plugin_address.to_string());
             Ok(Response::new().add_attributes(vec![
                 ("action", "disallow_plugin"),
                 ("plugin_address", plugin_address.to_string().as_str()),
             ]))
         }
+        ExecuteMsg::UpdatePlugin { plugin_info } => {
+            if !PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Plugin not found",
+                )));
+            }
+
+            validate_plugin(deps.as_ref(), &plugin_info)?;
+
+            // just save it
+            PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
+            Ok(Response::new().add_attribute("action", "update_plugin"))
+        }
     }
+}
+
+// validate plugin info
+// prevent front-run attack
+fn validate_plugin(deps: Deps, plugin_info: &Plugin) -> StdResult<()> {
+    // query plugin contract infor
+    let contract_info: ContractInfoResponse =
+        deps.querier
+            .query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
+                contract_addr: plugin_info.address.to_string(),
+            }))?;
+    if contract_info.code_id != plugin_info.code_id {
+        return Err(StdError::generic_err("Invalid plugin code_id"));
+    }
+
+    Ok(())
 }
 
 /// Handling contract query
@@ -96,6 +135,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 plugin_type: plugin.plugin_type,
                 version: plugin.version,
                 address: plugin.address.to_string(),
+                code_id: plugin.code_id,
+                enabled: plugin.enabled,
             })
         }
     }

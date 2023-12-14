@@ -1,3 +1,4 @@
+use crate::state::PluginStatus;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
@@ -12,11 +13,14 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     RegisterPlugin {
         plugin_address: Addr,
-        checksum: String,
         config: String,
     },
     UnregisterPlugin {
         plugin_address: Addr,
+    },
+    UpdatePlugin {
+        plugin_address: Addr,
+        status: PluginStatus,
     },
 }
 

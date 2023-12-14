@@ -20,7 +20,6 @@ pub struct Plugin {
     pub name: String,
     pub plugin_type: PluginType,
     pub contract_address: Addr,
-    pub checksum: String,
     pub status: PluginStatus,
     pub config: String,
 }
