@@ -133,8 +133,10 @@ fn handle_after_execute(
                     l.used = Uint128::zero();
 
                     // set to new begin period
-                    l.begin_period = block_time - (block_time - l.begin_period)
-                                    .checked_rem(l.periodic).unwrap()
+                    l.begin_period = block_time
+                        - (block_time - l.begin_period)
+                            .checked_rem(l.periodic)
+                            .unwrap()
                 }
 
                 if let Some(item) = transfer_balances
@@ -267,6 +269,12 @@ fn validate_limit(limit: &Limit, env: Env) -> Result<(), ContractError> {
     match limit {
         Limit::PerTransaction(_) => {}
         Limit::Periodic(l) => {
+            if l.periodic.u64() == 0u64 {
+                return Err(ContractError::CustomError {
+                    val: String::from("zero time period"),
+                });
+            }
+
             if l.periodic.u64() > MAX_SEC_PERIODIC {
                 return Err(ContractError::CustomError {
                     val: String::from("period too large"),
