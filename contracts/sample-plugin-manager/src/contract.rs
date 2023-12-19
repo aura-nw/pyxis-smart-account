@@ -56,7 +56,7 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, C
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -75,7 +75,7 @@ pub fn execute(
                 )));
             }
 
-            validate_plugin(deps.as_ref(), &plugin_info)?;
+            validate_plugin(deps.as_ref(), env, &plugin_info)?;
 
             // just save it
             PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
@@ -98,7 +98,7 @@ pub fn execute(
                 )));
             }
 
-            validate_plugin(deps.as_ref(), &plugin_info)?;
+            validate_plugin(deps.as_ref(), env, &plugin_info)?;
 
             // just save it
             PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
@@ -109,7 +109,7 @@ pub fn execute(
 
 // validate plugin info
 // prevent front-run attack
-fn validate_plugin(deps: Deps, plugin_info: &Plugin) -> StdResult<()> {
+fn validate_plugin(deps: Deps, env: Env, plugin_info: &Plugin) -> StdResult<()> {
     // query plugin contract infor
     let contract_info: ContractInfoResponse =
         deps.querier
@@ -118,6 +118,11 @@ fn validate_plugin(deps: Deps, plugin_info: &Plugin) -> StdResult<()> {
             }))?;
     if contract_info.code_id != plugin_info.code_id {
         return Err(StdError::generic_err("Invalid plugin code_id"));
+    }
+
+    // require plugin-manager as plugin admin
+    if contract_info.admin.is_none() || contract_info.admin.unwrap() != env.contract.address {
+        return Err(StdError::generic_err("Invalid plugin admin"));
     }
 
     Ok(())
