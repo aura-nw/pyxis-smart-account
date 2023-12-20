@@ -118,7 +118,7 @@ pub fn execute(
 
             PLUGINS.save(deps.storage, &plugin_address, &plugin)?;
             Ok(Response::new()
-                .add_attribute("action", "upgrade_plugin")
+                .add_attribute("action", "migrate_plugin")
                 .add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
                     contract_addr: plugin_address.clone(),
                     new_code_id,
