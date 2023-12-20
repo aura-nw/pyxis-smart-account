@@ -1,19 +1,24 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo,
+    to_json_binary, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo, Order,
     QueryRequest, Reply, Response, StdError, StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use crate::state::{Config, Plugin, CONFIG, PLUGINS};
-use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
+use pyxis_sm::plugin_manager_msg::{AllPluginsResponse, PluginResponse, QueryMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:sample-plugin-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// settings for query pagination
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
 
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -138,6 +143,27 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 code_id: plugin.code_id,
                 enabled: plugin.enabled,
             })
+        }
+        QueryMsg::AllPlugins { start_after, limit } => {
+            let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+            let start = start_after.map(|s| Bound::ExclusiveRaw(s.into_bytes()));
+
+            let plugins = PLUGINS
+                .range(deps.storage, start, None, Order::Ascending)
+                .take(limit)
+                .map(|item| {
+                    item.map(|(_, plugin)| PluginResponse {
+                        name: plugin.name,
+                        plugin_type: plugin.plugin_type,
+                        version: plugin.version,
+                        address: plugin.address.to_string(),
+                        code_id: plugin.code_id,
+                        enabled: plugin.enabled,
+                    })
+                })
+                .collect::<StdResult<_>>()?;
+
+            to_json_binary(&AllPluginsResponse { plugins })
         }
     }
 }

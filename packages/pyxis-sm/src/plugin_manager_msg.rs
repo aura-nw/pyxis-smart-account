@@ -6,6 +6,12 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 pub enum QueryMsg {
     #[returns(PluginResponse)]
     PluginInfo { address: String },
+
+    #[returns(AllPluginsResponse)]
+    AllPlugins {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 }
 
 #[cw_serde]
@@ -22,4 +28,9 @@ pub struct PluginResponse {
     pub address: String,
     pub code_id: u64,
     pub enabled: bool,
+}
+
+#[cw_serde]
+pub struct AllPluginsResponse {
+    pub plugins: Vec<PluginResponse>,
 }
