@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo,
-    QueryRequest, Reply, Response, StdError, StdResult, WasmQuery,
+    to_json_binary, Addr, Binary, ContractInfoResponse, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
 
@@ -103,6 +103,27 @@ pub fn execute(
             // just save it
             PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
             Ok(Response::new().add_attribute("action", "update_plugin"))
+        }
+        ExecuteMsg::MigratePlugin {
+            plugin_address,
+            new_code_id,
+            msg,
+        } => {
+            let mut plugin = PLUGINS
+                .load(deps.storage, &plugin_address)
+                .map_err(|_| ContractError::Std(StdError::generic_err("Plugin not found")))?;
+
+            // set new code_id
+            plugin.code_id = new_code_id;
+
+            PLUGINS.save(deps.storage, &plugin_address, &plugin)?;
+            Ok(Response::new()
+                .add_attribute("action", "upgrade_plugin")
+                .add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+                    contract_addr: plugin_address.clone(),
+                    new_code_id,
+                    msg: Binary::from(msg.as_bytes()),
+                })))
         }
     }
 }
