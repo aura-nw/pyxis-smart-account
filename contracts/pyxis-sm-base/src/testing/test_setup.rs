@@ -80,7 +80,7 @@ pub fn setup_contracts<'a>(app: &mut App, code_ids: &HashMap<&str, u64>) -> Hash
         *code_ids.get("sample_plugin_manager").unwrap(),
         Addr::unchecked(SM_ADDRESS),
         &PluginManagerInstantiateMsg {
-            admin: SM_ADDRESS.to_string(),
+            owner: SM_ADDRESS.to_string(),
         },
         &vec![],
         "sample plugin manager 1",
