@@ -137,12 +137,13 @@ fn validate_plugin(deps: Deps, env: Env, plugin_info: &Plugin) -> StdResult<()> 
             .query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
                 contract_addr: plugin_info.address.to_string(),
             }))?;
+            
     if contract_info.code_id != plugin_info.code_id {
         return Err(StdError::generic_err("Invalid plugin code_id"));
     }
 
     // require plugin-manager as plugin admin
-    if contract_info.admin.is_none() || contract_info.admin.unwrap() != env.contract.address {
+    if contract_info.admin.unwrap_or(String::default()) != env.contract.address {
         return Err(StdError::generic_err("Invalid plugin admin"));
     }
 
