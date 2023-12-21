@@ -180,7 +180,7 @@ pub fn setup_contracts<'a>(
         .instantiate(
             *code_ids.get("sample_plugin_manager").unwrap(),
             &PluginManagerInstantiateMsg {
-                admin: deployer.address(),
+                owner: deployer.address(),
             },
             None,
             Some("sample_plugin_manager"),

@@ -1,14 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, ContractInfoResponse, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    to_json_binary, Binary, ContractInfoResponse, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
+use cw_ownable::update_ownership;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Config, Plugin, CONFIG, PLUGINS};
+use crate::state::{Plugin, PLUGINS};
 use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
 
 // version info for migration info
@@ -25,10 +26,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let config = Config {
-        admin: Addr::unchecked(msg.admin),
-    };
-    CONFIG.save(deps.storage, &config)?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
@@ -60,11 +58,6 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    if info.sender != config.admin {
-        return Err(ContractError::Unauthorized {});
-    }
-
     match msg {
         ExecuteMsg::AllowPlugin { plugin_info } => {
             // check if this plugin has already been allowed
@@ -125,6 +118,12 @@ pub fn execute(
                     msg: Binary::from(msg.as_bytes()),
                 })))
         }
+        ExecuteMsg::UpdateOwnership(action) => {
+            update_ownership(deps, &env.block, &info.sender, action)
+                .map_err(|_| ContractError::Std(StdError::generic_err("Update ownership fail")))?;
+
+            Ok(Response::new().add_attribute("action", "update_ownership"))
+        }
     }
 }
 
@@ -137,7 +136,7 @@ fn validate_plugin(deps: Deps, env: Env, plugin_info: &Plugin) -> StdResult<()> 
             .query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
                 contract_addr: plugin_info.address.to_string(),
             }))?;
-            
+
     if contract_info.code_id != plugin_info.code_id {
         return Err(StdError::generic_err("Invalid plugin code_id"));
     }
