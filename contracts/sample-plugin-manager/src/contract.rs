@@ -135,14 +135,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PluginInfo { address } => {
             println!("address: {}", address);
             let plugin = PLUGINS.load(deps.storage, &address)?;
-            to_json_binary(&PluginResponse {
-                name: plugin.name,
-                plugin_type: plugin.plugin_type,
-                version: plugin.version,
-                address: plugin.address.to_string(),
-                code_id: plugin.code_id,
-                enabled: plugin.enabled,
-            })
+            to_json_binary(&Into::<PluginResponse>::into(plugin))
         }
         QueryMsg::AllPlugins { start_after, limit } => {
             let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
@@ -152,14 +145,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .range(deps.storage, start, None, Order::Ascending)
                 .take(limit)
                 .map(|item| {
-                    item.map(|(_, plugin)| PluginResponse {
-                        name: plugin.name,
-                        plugin_type: plugin.plugin_type,
-                        version: plugin.version,
-                        address: plugin.address.to_string(),
-                        code_id: plugin.code_id,
-                        enabled: plugin.enabled,
-                    })
+                    item.map(|(_, plugin)| plugin.into())
                 })
                 .collect::<StdResult<_>>()?;
 
