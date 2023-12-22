@@ -58,11 +58,11 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    // check onwership
-    assert_owner(deps.storage, &info.sender).unwrap();
-
     match msg {
         ExecuteMsg::AllowPlugin { plugin_info } => {
+            // check onwership
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             // check if this plugin has already been allowed
             // for now we will throw error
             if PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
@@ -81,6 +81,8 @@ pub fn execute(
             ]))
         }
         ExecuteMsg::DisallowPlugin { plugin_address } => {
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             PLUGINS.remove(deps.storage, &plugin_address.to_string());
             Ok(Response::new().add_attributes(vec![
                 ("action", "disallow_plugin"),
@@ -88,6 +90,8 @@ pub fn execute(
             ]))
         }
         ExecuteMsg::UpdatePlugin { plugin_info } => {
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             if !PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
                 return Err(ContractError::Std(StdError::generic_err(
                     "Plugin not found",
@@ -105,6 +109,8 @@ pub fn execute(
             new_code_id,
             msg,
         } => {
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             let mut plugin = PLUGINS
                 .load(deps.storage, &plugin_address)
                 .map_err(|_| ContractError::Std(StdError::generic_err("Plugin not found")))?;
