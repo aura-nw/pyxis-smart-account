@@ -5,7 +5,7 @@ use cosmwasm_std::{
     QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
-use cw_ownable::update_ownership;
+use cw_ownable::{assert_owner, update_ownership};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
@@ -58,6 +58,9 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    // check onwership
+    assert_owner(deps.storage, &info.sender).unwrap();
+
     match msg {
         ExecuteMsg::AllowPlugin { plugin_info } => {
             // check if this plugin has already been allowed
