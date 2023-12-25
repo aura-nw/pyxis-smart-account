@@ -213,6 +213,8 @@ pub fn after_execute(
         let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
         let msg_sender = Addr::unchecked(msg_exec.contract);
         if let Some(plugin) = PLUGINS.may_load(deps.storage, &msg_sender)? {
+            // do not allow smart account to directly execute `PyxisPlugin Execute` messages
+            // those messages are only called on behalf of the account through the smart contract
             match plugin.plugin_type {
                 PluginType::Recovery => {
                     let msg: Result<PyxisRecoveryPluginExecuteMsg, _> =
