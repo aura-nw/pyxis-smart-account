@@ -38,7 +38,6 @@ schemars         = { workspace = true }
 serde            = { workspace = true }
 thiserror        = { workspace = true }
 pyxis-sm         = { workspace = true }
-serde-json-wasm  = "1.0.0"
 cosmos-sdk-proto = { workspace = true}
 pyxis-sm-derive  = { workspace = true } 
 
