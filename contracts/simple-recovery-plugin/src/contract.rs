@@ -4,9 +4,8 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, Std
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{InstantiateMsg, MigrateMsg, ExecuteMsg, QueryMsg};
 use crate::state::{RecoveryConfig, CONFIG_MAP};
-use pyxis_sm::msg::PyxisRecoveryPluginExecuteMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:simple-recovery-plugin";
@@ -50,14 +49,14 @@ pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: PyxisRecoveryPluginExecuteMsg,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        PyxisRecoveryPluginExecuteMsg::Register { config } => {
+        ExecuteMsg::Register { config } => {
             handle_register(deps, env, info, config)
         }
-        PyxisRecoveryPluginExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
-        PyxisRecoveryPluginExecuteMsg::Recover {
+        ExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
+        ExecuteMsg::Recover {
             caller,
             pub_key,
             credentials,

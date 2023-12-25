@@ -24,6 +24,9 @@ panic            = 'abort'
 rpath            = false
 
 [workspace.dependencies]
+proc-macro2      = "1"
+quote            = "1"
+syn              = "1"
 cosmwasm-schema  = "1.1.2"
 cosmwasm-std     = "1.1.2"
 cosmwasm-storage = "1.1.2"
@@ -35,6 +38,7 @@ serde            = { version = "1.0.137", default-features = false, features = [
 thiserror        = { version = "1.0.31" }
 pyxis-sm         = { path = "./packages/pyxis-sm" }
 cosmos-sdk-proto = { version = "0.20.0", default-features = false, features = ["cosmwasm"] }
+pyxis-sm-derive  = { version = "0.1.0", path = "./packages/pyxis-sm/derive" }
 
 [workspace.dev-depenpencies]
 cw-multi-test = "0.16.1"

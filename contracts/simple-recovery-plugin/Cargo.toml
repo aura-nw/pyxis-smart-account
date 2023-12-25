@@ -39,6 +39,7 @@ serde            = { workspace = true }
 thiserror        = { workspace = true }
 pyxis-sm         = { workspace = true }
 serde-json-wasm  = "1.0.0"
+pyxis-sm-derive  = { workspace = true } 
 
 [dev-dependencies]
 cw-multi-test = "0.13.2"

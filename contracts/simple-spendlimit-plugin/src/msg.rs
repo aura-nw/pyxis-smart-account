@@ -1,33 +1,16 @@
 use crate::state::Limit;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use pyxis_sm::msg::{CallInfo, SdkMsg};
+use pyxis_sm_derive::base_plugin_execute; 
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
 pub struct InstantiateMsg {}
 
 /// Message type for `execute` entry_point
+#[base_plugin_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
-    Register {
-        config: String,
-    },
-
-    Unregister {},
-
-    PreExecute {
-        msgs: Vec<SdkMsg>,
-        call_info: CallInfo,
-        is_authz: bool,
-    },
-
-    AfterExecute {
-        msgs: Vec<SdkMsg>,
-        call_info: CallInfo,
-        is_authz: bool,
-    },
-
     AddLimit {
         limit: Limit,
     },

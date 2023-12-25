@@ -1,0 +1,20 @@
+[package]
+name        = "pyxis-sm-derive"
+description   = "Definition and types for Pyxis Smart Account interface"
+authors       = ["Dinh Thanh Ha <hadt@aura.network"]
+version       = { workspace = true }
+edition       = { workspace = true }
+resolver      = "2"
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+documentation = { workspace = true }
+
+[lib]
+doctest    = false # disable doc tests
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote       = { workspace = true }
+syn         = { workspace = true }
