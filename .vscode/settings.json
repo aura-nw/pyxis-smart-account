@@ -1,6 +1,0 @@
-{
-    "rust-analyzer.linkedProjects": [
-        "./packages/pyxis-sm/derive/Cargo.toml",
-        "./packages/pyxis-sm/derive/Cargo.toml"
-    ]
-}
