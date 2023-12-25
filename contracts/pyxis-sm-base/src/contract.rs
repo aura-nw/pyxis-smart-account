@@ -211,7 +211,31 @@ pub fn after_execute(
         }
 
         let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
-        if msg_exec.contract == env.contract.address.to_string() {
+        let msg_sender = Addr::unchecked(msg_exec.contract);
+        if let Some(plugin) = PLUGINS.may_load(deps.storage, &msg_sender)? {
+            match plugin.plugin_type {
+                PluginType::Recovery => {
+                    let msg: Result<PyxisRecoveryPluginExecuteMsg, _> =
+                        serde_json_wasm::from_slice(msg_exec.msg.as_slice());
+                    if msg.is_ok() {
+                        return Err(ContractError::Std(StdError::generic_err(
+                            "Not allowed action",
+                        )));
+                    }
+                }
+                PluginType::Other => {
+                    let msg: Result<PyxisPluginExecuteMsg, _> =
+                        serde_json_wasm::from_slice(msg_exec.msg.as_slice());
+                    if msg.is_ok() {
+                        return Err(ContractError::Std(StdError::generic_err(
+                            "Not allowed action",
+                        )));
+                    }
+                }
+            }
+        }
+
+        if msg_sender == env.contract.address {
             // execute call to this smart-account contract must be
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             // only smart-account owner can execute those msgs
