@@ -4,7 +4,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
-use pyxis_sm::plugin_manager_msg::PluginType;
+use pyxis_sm::plugin_manager_msg::{PluginType, PluginResponse};
 
 #[cw_serde]
 pub struct Plugin {
@@ -14,6 +14,19 @@ pub struct Plugin {
     pub version: String,
     pub address: Addr,
     pub enabled: bool,
+}
+
+impl Into<PluginResponse>for Plugin {
+    fn into(self) -> PluginResponse { 
+        PluginResponse{
+            name: self.name,
+            plugin_type: self.plugin_type,
+            version: self.version,
+            address: self.address.to_string(),
+            code_id: self.code_id,
+            enabled: self.enabled
+        }
+    }
 }
 
 pub const PLUGINS: Map<&str, Plugin> = Map::new("plugins");

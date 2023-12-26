@@ -1,4 +1,4 @@
-use crate::state::PluginStatus;
+use crate::state::{Plugin, PluginStatus};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
@@ -32,15 +32,14 @@ pub enum MigrateMsg {}
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    // This example query variant indicates that any client can query the contract
-    // using `YourQuery` and it will return `YourQueryResponse`
-    // This `returns` information will be included in contract's schema
-    // which is used for client code generation.
-    //
-    // #[returns(YourQueryResponse)]
-    // YourQuery {},
+    #[returns(AllPluginsResponse)]
+    AllPlugins {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 }
 
-// We define a custom struct for each query response
-// #[cw_serde]
-// pub struct YourQueryResponse {}
+#[cw_serde]
+pub struct AllPluginsResponse {
+    pub plugins: Vec<Plugin>,
+}

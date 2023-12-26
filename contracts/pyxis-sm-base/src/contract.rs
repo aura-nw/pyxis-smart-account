@@ -1,7 +1,7 @@
 use std::vec;
 
 use cosmos_sdk_proto::traits::{Message, Name};
-use cosmwasm_std::{to_json_binary, CosmosMsg, StdError};
+use cosmwasm_std::{to_json_binary, CosmosMsg, Order, StdError};
 
 use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 #[cfg(not(feature = "library"))]
@@ -11,10 +11,11 @@ use cosmwasm_std::{
     QueryRequest, Reply, Response, StdResult, WasmQuery,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use serde_json_wasm::de::Error;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{AllPluginsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
 use pyxis_sm::msg::{
@@ -25,6 +26,10 @@ use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQue
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// settings for query pagination
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
 
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -506,13 +511,20 @@ fn update_plugin(
 
 /// Handling contract query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        // Find matched incoming message variant and query them your custom logic
-        // and then construct your query response with the type usually defined
-        // `msg.rs` alongside with the query message itself.
-        //
-        // use `cosmwasm_std::to_binary` to serialize query response to json binary.
+        QueryMsg::AllPlugins { start_after, limit } => {
+            let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+            let start = start_after.map(|s| Bound::ExclusiveRaw(s.into_bytes()));
+
+            let plugins = PLUGINS
+                .range(deps.storage, start, None, Order::Ascending)
+                .take(limit)
+                .map(|item| item.map(|(_, plugin)| plugin))
+                .collect::<StdResult<_>>()?;
+
+            to_json_binary(&AllPluginsResponse { plugins })
+        }
     }
 }
 

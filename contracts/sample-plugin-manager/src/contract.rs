@@ -2,19 +2,24 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Binary, ContractInfoResponse, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery,
+    QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery, Order,
 };
 use cw2::set_contract_version;
 use cw_ownable::{assert_owner, update_ownership};
+use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Plugin, PLUGINS};
-use pyxis_sm::plugin_manager_msg::{PluginResponse, QueryMsg};
+use crate::state::{Config, Plugin, CONFIG, PLUGINS};
+use pyxis_sm::plugin_manager_msg::{AllPluginsResponse, PluginResponse, QueryMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:sample-plugin-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// settings for query pagination
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
 
 /// Handling contract instantiation
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -165,14 +170,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PluginInfo { address } => {
             println!("address: {}", address);
             let plugin = PLUGINS.load(deps.storage, &address)?;
-            to_json_binary(&PluginResponse {
-                name: plugin.name,
-                plugin_type: plugin.plugin_type,
-                version: plugin.version,
-                address: plugin.address.to_string(),
-                code_id: plugin.code_id,
-                enabled: plugin.enabled,
-            })
+            to_json_binary(&PluginResponse::from(plugin.into()))
+        }
+        QueryMsg::AllPlugins { start_after, limit } => {
+            let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+            let start = start_after.map(|s| Bound::ExclusiveRaw(s.into_bytes()));
+
+            let plugins = PLUGINS
+                .range(deps.storage, start, None, Order::Ascending)
+                .take(limit)
+                .map(|item| {
+                    item.map(|(_, plugin)| plugin.into())
+                })
+                .collect::<StdResult<_>>()?;
+
+            to_json_binary(&AllPluginsResponse { plugins })
         }
     }
 }
