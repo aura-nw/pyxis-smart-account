@@ -1,10 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, ContractInfoResponse, Deps, DepsMut, Env, MessageInfo, Order,
-    QueryRequest, Reply, Response, StdError, StdResult, WasmQuery,
+    to_json_binary, Binary, ContractInfoResponse, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery, Order,
 };
 use cw2::set_contract_version;
+use cw_ownable::{assert_owner, update_ownership};
 use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
@@ -30,10 +31,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let config = Config {
-        admin: Addr::unchecked(msg.admin),
-    };
-    CONFIG.save(deps.storage, &config)?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(&msg.owner))?;
 
     // With `Response` type, it is possible to dispatch message to invoke external logic.
     // See: https://github.com/CosmWasm/cosmwasm/blob/main/SEMANTICS.md#dispatching-messages
@@ -61,17 +59,15 @@ pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, C
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    if info.sender != config.admin {
-        return Err(ContractError::Unauthorized {});
-    }
-
     match msg {
         ExecuteMsg::AllowPlugin { plugin_info } => {
+            // check onwership
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             // check if this plugin has already been allowed
             // for now we will throw error
             if PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
@@ -80,7 +76,7 @@ pub fn execute(
                 )));
             }
 
-            validate_plugin(deps.as_ref(), &plugin_info)?;
+            validate_plugin(deps.as_ref(), env, &plugin_info)?;
 
             // just save it
             PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
@@ -90,6 +86,8 @@ pub fn execute(
             ]))
         }
         ExecuteMsg::DisallowPlugin { plugin_address } => {
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             PLUGINS.remove(deps.storage, &plugin_address.to_string());
             Ok(Response::new().add_attributes(vec![
                 ("action", "disallow_plugin"),
@@ -97,32 +95,69 @@ pub fn execute(
             ]))
         }
         ExecuteMsg::UpdatePlugin { plugin_info } => {
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
             if !PLUGINS.has(deps.storage, &plugin_info.address.to_string()) {
                 return Err(ContractError::Std(StdError::generic_err(
                     "Plugin not found",
                 )));
             }
 
-            validate_plugin(deps.as_ref(), &plugin_info)?;
+            validate_plugin(deps.as_ref(), env, &plugin_info)?;
 
             // just save it
             PLUGINS.save(deps.storage, &plugin_info.address.to_string(), &plugin_info)?;
             Ok(Response::new().add_attribute("action", "update_plugin"))
+        }
+        ExecuteMsg::MigratePlugin {
+            plugin_address,
+            new_code_id,
+            msg,
+        } => {
+            assert_owner(deps.storage, &info.sender).map_err(|_| ContractError::Unauthorized {})?;
+
+            let mut plugin = PLUGINS
+                .load(deps.storage, &plugin_address)
+                .map_err(|_| ContractError::Std(StdError::generic_err("Plugin not found")))?;
+
+            // set new code_id
+            plugin.code_id = new_code_id;
+
+            PLUGINS.save(deps.storage, &plugin_address, &plugin)?;
+            Ok(Response::new()
+                .add_attribute("action", "migrate_plugin")
+                .add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+                    contract_addr: plugin_address.clone(),
+                    new_code_id,
+                    msg: Binary::from(msg.as_bytes()),
+                })))
+        }
+        ExecuteMsg::UpdateOwnership(action) => {
+            update_ownership(deps, &env.block, &info.sender, action)
+                .map_err(|_| ContractError::Std(StdError::generic_err("Update ownership fail")))?;
+
+            Ok(Response::new().add_attribute("action", "update_ownership"))
         }
     }
 }
 
 // validate plugin info
 // prevent front-run attack
-fn validate_plugin(deps: Deps, plugin_info: &Plugin) -> StdResult<()> {
+fn validate_plugin(deps: Deps, env: Env, plugin_info: &Plugin) -> StdResult<()> {
     // query plugin contract infor
     let contract_info: ContractInfoResponse =
         deps.querier
             .query(&QueryRequest::Wasm(WasmQuery::ContractInfo {
                 contract_addr: plugin_info.address.to_string(),
             }))?;
+
     if contract_info.code_id != plugin_info.code_id {
         return Err(StdError::generic_err("Invalid plugin code_id"));
+    }
+
+    // require plugin-manager as plugin admin
+    if contract_info.admin.unwrap_or(String::default()) != env.contract.address {
+        return Err(StdError::generic_err("Invalid plugin admin"));
     }
 
     Ok(())

@@ -28,12 +28,15 @@ cosmwasm-schema  = "1.1.2"
 cosmwasm-std     = "1.1.2"
 cosmwasm-storage = "1.1.2"
 cw-storage-plus  = "0.13.2"
+cw-ownable       = "0.5.1"
 cw2              = "0.13.2"
+serde-json-wasm  = "1.0.0"
 schemars         = "0.8.8"
 serde            = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror        = { version = "1.0.31" }
 pyxis-sm         = { path = "./packages/pyxis-sm" }
 cosmos-sdk-proto = { version = "0.20.0", default-features = false, features = ["cosmwasm"] }
+pyxis-sm-derive  = { version = "0.1.0", path = "./packages/pyxis-sm/derive" }
 
 [workspace.dev-depenpencies]
 cw-multi-test = "0.16.1"

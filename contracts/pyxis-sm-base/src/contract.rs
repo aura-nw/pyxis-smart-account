@@ -137,9 +137,9 @@ pub fn pre_execute(
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             // only smart-account owner can execute those msgs
             // error will be thrown at `after_execute` handler
-            if is_authz {
-                return Ok(Response::new().add_attribute("action", "pre_execute"));
-            }
+            // if is_authz {
+            //    return Err(ContractError::Std(StdError::generic_err("Unauthorization")));
+            // }
 
             let msg_raw: Result<ExecuteMsg, Error> =
                 serde_json_wasm::from_slice(msg_exec.msg.as_slice());
@@ -441,7 +441,7 @@ pub fn unregister_plugin(
 
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    // call plugin manager to check if this plugin is enabled
+    // call plugin manager to check if this plugin is enabled  
     let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
     let query_plugin_msg = PMQueryMsg::PluginInfo {
         address: plugin_address.to_string(),

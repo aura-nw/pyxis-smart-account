@@ -38,6 +38,7 @@ schemars         = { workspace = true }
 serde            = { workspace = true }
 thiserror        = { workspace = true }
 pyxis-sm         = { workspace = true }
+cw-ownable       = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = "0.13.2"

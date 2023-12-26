@@ -30,10 +30,3 @@ impl Into<PluginResponse>for Plugin {
 }
 
 pub const PLUGINS: Map<&str, Plugin> = Map::new("plugins");
-
-#[cw_serde]
-pub struct Config {
-    pub admin: Addr,
-}
-
-pub const CONFIG: Item<Config> = Item::new("config");
