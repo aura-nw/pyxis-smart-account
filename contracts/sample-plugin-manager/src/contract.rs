@@ -135,7 +135,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PluginInfo { address } => {
             println!("address: {}", address);
             let plugin = PLUGINS.load(deps.storage, &address)?;
-            to_json_binary(&Into::<PluginResponse>::into(plugin))
+            to_json_binary(&PluginResponse::from(plugin.into()))
         }
         QueryMsg::AllPlugins { start_after, limit } => {
             let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
