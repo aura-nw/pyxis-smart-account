@@ -211,8 +211,8 @@ pub fn after_execute(
         }
 
         let msg_exec = MsgExecuteContract::decode(msg.value.as_slice()).unwrap();
-        let msg_sender = Addr::unchecked(msg_exec.contract);
-        if let Some(plugin) = PLUGINS.may_load(deps.storage, &msg_sender)? {
+        let msg_contract_addr = Addr::unchecked(msg_exec.contract);
+        if let Some(plugin) = PLUGINS.may_load(deps.storage, &msg_contract_addr)? {
             // do not allow smart account to directly execute `PyxisPlugin Execute` messages
             // those messages are only called on behalf of the account through the smart contract
             match plugin.plugin_type {
@@ -237,7 +237,7 @@ pub fn after_execute(
             }
         }
 
-        if msg_sender == env.contract.address {
+        if msg_contract_addr == env.contract.address {
             // execute call to this smart-account contract must be
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             // only smart-account owner can execute those msgs
