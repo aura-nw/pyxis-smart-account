@@ -40,13 +40,12 @@ serde            = { workspace = true }
 thiserror        = { workspace = true }
 pyxis-sm         = { workspace = true }
 cosmos-sdk-proto = { workspace = true } 
-serde-json-wasm  = "1.0.0"
+serde-json-wasm  = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test          = "0.13.2"
 sample-plugin          = { path = "../sample-plugin" }
 sample-plugin-manager  = { path = "../sample-plugin-manager" }
 simple-recovery-plugin = { path = "../simple-recovery-plugin" }
-serde-json-wasm        = "1.0.0"
 aura-proto               = { git = "https://github.com/aura-nw/test-tube.git" }
 aura-test-tube         = { git = "https://github.com/aura-nw/test-tube.git" }

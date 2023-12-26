@@ -436,7 +436,7 @@ pub fn unregister_plugin(
 
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    // call plugin manager to check if this plugin is enabled
+    // call plugin manager to check if this plugin is enabled  
     let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
     let query_plugin_msg = PMQueryMsg::PluginInfo {
         address: plugin_address.to_string(),
