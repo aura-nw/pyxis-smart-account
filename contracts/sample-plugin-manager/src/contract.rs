@@ -10,7 +10,7 @@ use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::{Config, Plugin, CONFIG, PLUGINS};
+use crate::state::{Plugin, PLUGINS};
 use pyxis_sm::plugin_manager_msg::{AllPluginsResponse, PluginResponse, QueryMsg};
 
 // version info for migration info
