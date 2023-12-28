@@ -24,63 +24,6 @@ Plugin contracts are contracts which hold the logic, configuration, and state of
 
 Each plugin contract could have a list of plugins which are essentially some executable functions. Whenever a transaction is executed, registered plugin contracts will receive a submessage to its `pre_execute` and `after_execute` functions containing the transaction’s information. If the plugin throw an error in its `after_execute` function, the transaction will be rejected. Throw in `pre_execute` function will not have any effect because of the way smart account module works. The plugin contract can still update its state in `pre_execute` function.
 
-### User registers a plugin.
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant SM as SmartAccount
-  participant PC as PluginContract
-  participant PM as PluginManager
-  
-	U ->>+ SM: register_plugin(address, config)
-  SM ->>+ PM: is_valid(address)
-  alt invalid
-		PM -->> SM: invalid
-	  SM -->> U: invalid plugin
-  else valid
-		PM -->>- SM: valid
-		SM ->>+ PC: register(config)
-		alt invalid
-			PC -->> SM: invalid
-			SM -->> U: invalid config
-		else valid
-	    PC -->>- SM: valid
-	    SM -->>- U: register successfully
-		end
-	end
-  
-```
-
-### User unregisters a plugin
-
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant SM as SmartAccount
-  participant PC as PluginContract
-  participant PM as PluginManager
-  
-	U ->>+ SM: unregister_plugin(address)
-  SM ->>+ PM: is_enabled(address)
-  alt disabled
-		PM -->> SM: disabled
-    SM -->> SM: remove_plugin(address)
-	  SM -->> U: removed
-  else enabled
-		PM -->>- SM: enabled
-		SM ->>+ PC: unregister()
-		alt failed
-			PC -->> SM: error
-			SM -->> U: cannot unregistered
-		else succeeded
-	    PC -->>- SM: ok
-      SM -->> SM: remove_plugin(address)
-	    SM -->>- U: unregister successfully
-		end
-	end
-  
-```
 
 ### User sends a transaction
 
@@ -138,8 +81,8 @@ For example, a user wants a cron-contract to perform swap from USDT to AURA ever
 ```
 
 We could have a set of validation rules for users to choose from, which could cover many simple cases.
-
-For security reasons, authorized actors cannot call messages which alter the smart account such as register, unregister or disable a plugin.
+ 
+> For security reasons, authorized actors cannot call messages which could alter the smart account or interact with plugins such as register, unregister, disable a plugin or change a plugin configuration.
 
 ### Examples
 
@@ -210,26 +153,116 @@ Using this plugin, however, is limited to smart accounts and not available for r
 
 Users can choose their preferred recovery methods by registering the corresponding recovery plugins. There will be no need to stick with the default method of the contract.
 
+## Smart Account Interface
+
+To use the plugin system, a smart account needs to implement the following functions:
+
+### register_plugin(address, config)
+
+A smart account needs to register a plugin contract before using it. The smart contract will call to Plugin Manager contract to check if the address is a valid plugin.
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant SM as SmartAccount
+  participant PC as PluginContract
+  participant PM as PluginManager
+  
+	U ->>+ SM: register_plugin(address, config)
+  SM ->>+ PM: is_valid(address)
+  alt invalid
+		PM -->> SM: invalid
+	  SM -->> U: invalid plugin
+  else valid
+		PM -->>- SM: valid
+		SM ->>+ PC: register(config)
+		alt invalid
+			PC -->> SM: invalid
+			SM -->> U: invalid config
+		else valid
+	    PC -->>- SM: valid
+	    SM -->>- U: register successfully
+		end
+	end
+  
+```
+
+### unregister_plugin(address)
+
+This function will be called when a user wants to remove a plugin. The plugin contract can take additional actions to remove the user their data.
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant SM as SmartAccount
+  participant PC as PluginContract
+  participant PM as PluginManager
+  
+	U ->>+ SM: unregister_plugin(address)
+  SM ->>+ PM: is_enabled(address)
+  alt disabled
+		PM -->> SM: disabled
+    SM -->> SM: remove_plugin(address)
+	  SM -->> U: removed
+  else enabled
+		PM -->>- SM: enabled
+		SM ->>+ PC: unregister()
+		alt failed
+			PC -->> SM: error
+			SM -->> U: cannot unregistered
+		else succeeded
+	    PC -->>- SM: ok
+      SM -->> SM: remove_plugin(address
+	    SM -->>- U: unregister successfully
+		end
+	end
+```
+
+### update_plugin(address, status)
+
+A smart account can enable or disable a plugin. When a plugin is disabled, it will not be called in `pre_execute` and `after_execute` functions. Currently, a plugin can only be disabled if the plugin manager contract has disabled it. The intended usecase for this function is for user to temporary disabled an faulty plugin but still preserve their data. For other cases, users need to unregister the plugin.
+
 ## Plugin Contract Interface
 
 A normal plugin contract needs to have at least 4 functions: `register`, `unregister`, `pre_execute` and `after_execute`. For recovery plugins, they need to have 3 functions: `register`, `unregiser`, and `recover`.
 
-### register(config)
 
+### Messages
+
+### Register(config)
 This function will be called when a user wants to register a plugin it's managed. The function takes a plugin name and its configuration. The smart contract will call to Plugin Manager contract to check if the address is a valid plugin.
 
-### unregister()
-
+#### Unregister()
 This function will be called when a user wants to remove a plugin. The contract can take additional actions to remove the user their data.
 
-### pre_execute(msgs, call_info, is_authz)
-
+#### PreExecute(msgs, call_info, is_authz)
 This function will be called in the `pre_execute` phase of a transaction. It will be called by ante handler of the smart account module.
 
-### after_execute(msgs, call_info, is_authz)
-
+#### AfterExecute(msgs, call_info, is_authz)
 This function will be called in the `after_execute` phase of a transaction. It will be called by post handler of the smart account module. `call_info` will contain information about caller and gas consumption.
 
-### recover(caller, pub_key, credentials)
-
+#### Recover(caller, pub_key, credentials)
 `caller` is the address that executes the recovery transaction and `credentials` are information that is necessary to verify the permission of `caller`. `pub_key` is the new public key that is associated with this smart account.
+
+
+## Plugin Manager Contract Interface
+
+A plugin manager contract is a registry of plugin contracts. Pyxis Plugin Manager will be the default plugin manager contract. However, users can choose to use another plugin manager contract if they want to. For example, a company can create their own plugin manager contract to manage their own plugins.
+
+### Messages
+
+A plugin manager contract needs to implement the following functions:
+
+#### AllowPlugin(name, plugin_type, code_id, version, address, enabled)
+This function will be called by an admin of the plugin manager contract. The plugin manager contract will check if the submitted information is valid and store it in its state.
+
+#### DisallowPlugin(address)
+This function will be called by an admin of the plugin manager contract. The plugin manager contract will remove the plugin from its state.
+
+#### UpdatePlugin(name, plugin_type, code_id, version, address, enabled)
+This function will be called by an admin of the plugin manager contract. The plugin manager contract will update the plugin information in its state.
+
+#### MigratePlugin(address, new_code_id, migrate_msg)
+This function will be called by an admin of the plugin manager contract. This function will migrate the plugin contract to a new code id with the submitted `migrate_msg`. This function is needed because plugin manager must known when a plugin contract changed to protect smart accounts from malicious plugins. Any plugins that are migrated without the permission of the plugin manager will be disabled. For that reason, when a plugin contract is instantiated, it must set the plugin manager contract as its admin.
+
+### Queries

@@ -29,7 +29,7 @@ A plugin system is essential for a smart account because it allows for a flexibl
 
 System manager is the admin of the Pyxis ecosystem. TODO: explain further. We use a multisig account as the system manager.
 
-Plugin managers are the ones who create and manage plugin contracts. At the moment, there is only one which is managed Pyxis as well. Later, third-party companies could have their own plugin manager accounts to manage their plugins. When a smart account is instantiated, users need to provide one or more plugin manager contract. The smart account will then use these plugin manager contracts to verify all plugins that are installed on the smart account.
+Plugin managers are the ones who create and manage plugin contracts. At the moment, there is only one which is managed by Pyxis. In the future, third-party companies could have their own plugin manager accounts to manage their plugins. When a smart account is instantiated, users need to provide one or more plugin manager contract. The smart account will then use these plugin manager contracts to verify all plugins that are installed on the smart account.
 
 Plugin contracts are contracts which hold the logic, configuration, and state of plugins. The corresponding plugin manager can enable, disable a plugin or upgrade the plugin contract.
 
