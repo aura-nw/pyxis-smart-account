@@ -10,7 +10,7 @@ use cosmwasm_std::{
     Storage, Uint128, Uint64,
 };
 use cw2::set_contract_version;
-use pyxis_sm::msg::{CallInfo, SdkMsg};
+use pyxis_sm::msg::{AuthzInfo, CallInfo, SdkMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:simple-spendlimit-plugin";
@@ -61,13 +61,13 @@ pub fn execute(
         ExecuteMsg::PreExecute {
             msgs,
             call_info,
-            is_authz,
-        } => handle_pre_execute(deps, env, info, msgs, call_info, is_authz),
+            authz_info,
+        } => handle_pre_execute(deps, env, info, msgs, call_info, authz_info),
         ExecuteMsg::AfterExecute {
             msgs,
             call_info,
-            is_authz,
-        } => handle_after_execute(deps, env, info, msgs, call_info, is_authz),
+            authz_info,
+        } => handle_after_execute(deps, env, info, msgs, call_info, authz_info),
         ExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         ExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
 
@@ -85,7 +85,7 @@ fn handle_pre_execute(
     _info: MessageInfo,
     _msgs: Vec<SdkMsg>,
     _call_info: CallInfo,
-    _is_authz: bool,
+    _authz_info: AuthzInfo,
 ) -> Result<Response, ContractError> {
     Ok(Response::new().add_attribute("action", "pre_execute"))
 }
@@ -96,7 +96,7 @@ fn handle_after_execute(
     info: MessageInfo,
     msgs: Vec<SdkMsg>,
     _call_info: CallInfo,
-    _is_authz: bool,
+    _authz_info: AuthzInfo,
 ) -> Result<Response, ContractError> {
     // load sender's limits
     let mut limits = load_limits(deps.storage, &info.sender)?;

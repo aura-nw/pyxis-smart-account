@@ -27,18 +27,29 @@ pub struct SdkMsg {
 }
 
 #[cw_serde]
+pub struct AuthzInfo {
+    pub grantee: String,
+}
+
+impl AuthzInfo {
+    pub fn is_authz(&self) -> bool {
+        self.grantee != String::default()
+    }
+}
+
+#[cw_serde]
 pub enum PyxisSudoMsg {
     // pre_execute is a base message which is called before any other message
     PreExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
-        is_authz: bool,
+        authz_info: AuthzInfo,
     },
     // after_execute is a base message which is called after any other message
     AfterExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
-        is_authz: bool,
+        authz_info: AuthzInfo,
     },
     // recover is a base message which is called when a smart account is recovered (change owner)
     Recover {
@@ -58,13 +69,13 @@ pub enum PyxisPluginExecuteMsg {
     PreExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
-        is_authz: bool,
+        authz_info: AuthzInfo,
     },
     /// AfterExecute is called at the end of a transaction
     AfterExecute {
         msgs: Vec<SdkMsg>,
         call_info: CallInfo,
-        is_authz: bool,
+        authz_info: AuthzInfo,
     },
 }
 

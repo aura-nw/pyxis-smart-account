@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Binary, ContractInfoResponse, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery, Order,
+    Order, QueryRequest, Reply, Response, StdError, StdResult, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
 use cw_ownable::{assert_owner, update_ownership};
@@ -179,9 +179,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let plugins = PLUGINS
                 .range(deps.storage, start, None, Order::Ascending)
                 .take(limit)
-                .map(|item| {
-                    item.map(|(_, plugin)| plugin.into())
-                })
+                .map(|item| item.map(|(_, plugin)| plugin.into()))
                 .collect::<StdResult<_>>()?;
 
             to_json_binary(&AllPluginsResponse { plugins })

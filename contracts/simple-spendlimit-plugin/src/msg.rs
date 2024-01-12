@@ -1,7 +1,7 @@
 use crate::state::Limit;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use pyxis_sm_derive::base_plugin_execute; 
+use pyxis_sm_derive::base_plugin_execute;
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
@@ -11,16 +11,9 @@ pub struct InstantiateMsg {}
 #[base_plugin_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
-    AddLimit {
-        limit: Limit,
-    },
-    UpdateLimit {
-        index: u32,
-        limit: Limit,
-    },
-    DeleteLimit {
-        index: u32,
-    },
+    AddLimit { limit: Limit },
+    UpdateLimit { index: u32, limit: Limit },
+    DeleteLimit { index: u32 },
 }
 
 /// Message type for `migrate` entry_point
