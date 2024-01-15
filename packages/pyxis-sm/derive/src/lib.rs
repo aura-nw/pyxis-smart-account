@@ -19,10 +19,7 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
 
     // parse the left enum
     let mut left: DeriveInput = parse_macro_input!(left);
-    let Enum(DataEnum {
-        variants,
-        ..
-    }) = &mut left.data else {
+    let Enum(DataEnum { variants, .. }) = &mut left.data else {
         return syn::Error::new(left.ident.span(), "only enums can accept variants")
             .to_compile_error()
             .into();
@@ -31,9 +28,9 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
     // parse the right enum
     let right: DeriveInput = parse_macro_input!(right);
     let Enum(DataEnum {
-        variants: to_add,
-        ..
-    }) = right.data else {
+        variants: to_add, ..
+    }) = right.data
+    else {
         return syn::Error::new(left.ident.span(), "only enums can provide variants")
             .to_compile_error()
             .into();
@@ -44,10 +41,6 @@ fn merge_variants(metadata: TokenStream, left: TokenStream, right: TokenStream) 
 
     quote! { #left }.into()
 }
-
-
-
-
 
 /// Append pyxis-sm plugin execute message variant(s) to an enum.
 ///
@@ -134,6 +127,25 @@ pub fn recovery_plugin_execute(metadata: TokenStream, input: TokenStream) -> Tok
                     pub_key: cosmwasm_std::Binary,
                     credentials: cosmwasm_std::Binary,
                 },
+            }
+        }
+        .into(),
+    )
+}
+
+/// Append pyxis-sm base plugin query variant(s) to an enum.
+#[proc_macro_attribute]
+pub fn base_plugin_query(metadata: TokenStream, input: TokenStream) -> TokenStream {
+    merge_variants(
+        metadata,
+        input,
+        quote! {
+            enum Right {
+                /// Query for current configuration given a smart account address
+                #[returns(String)]
+                Config {
+                    address: String,
+                }
             }
         }
         .into(),

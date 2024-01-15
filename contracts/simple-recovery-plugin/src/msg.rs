@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use pyxis_sm_derive::recovery_plugin_execute;
+use pyxis_sm_derive::{base_plugin_query, recovery_plugin_execute};
 
 /// Message type for `instantiate` entry_point
 #[cw_serde]
@@ -15,6 +15,7 @@ pub enum ExecuteMsg {}
 pub enum MigrateMsg {}
 
 /// Message type for `query` entry_point
+#[base_plugin_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {

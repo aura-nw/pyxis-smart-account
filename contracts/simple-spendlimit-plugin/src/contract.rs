@@ -297,6 +297,7 @@ fn validate_limit(limit: &Limit, env: Env) -> Result<(), ContractError> {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetLimits { address } => to_json_binary(&get_limits(deps, address)?),
+        QueryMsg::Config { address: _ } => to_json_binary(&String::default()),
     }
 }
 
