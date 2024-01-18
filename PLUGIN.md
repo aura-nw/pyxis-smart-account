@@ -61,7 +61,7 @@ With plugins, we can allow another actor to perform certain functions for users,
 
 For that, we need users to `authz` for the plugin contract to call the expected messages and register a plugin which verifies messages for more specific conditions. 
 
-For example, a user wants a cron-contract to perform swap from USDT to AURA every morning. The user needs to use `authz` to allow the cron-contract to call `MsgExecuteContract` messages. Then, the user will register a plugin which checks every message if it was not called directly by the user. An example config could be:
+For example, a user wants a cron-contract to perform swap from USDT to AURA every morning. The user needs to use `authz` to allow the cron-contract to call `MsgExecuteContract` messages. Then, the user will register a plugin which checks every message if it was not called directly by the user. An example config which allows a cron contract to execute swap on behalf of a smart account could be:
 
 ```json
 {
@@ -266,3 +266,28 @@ This function will be called by an admin of the plugin manager contract. The plu
 This function will be called by an admin of the plugin manager contract. This function will migrate the plugin contract to a new code id with the submitted `migrate_msg`. This function is needed because plugin manager must known when a plugin contract changed to protect smart accounts from malicious plugins. Any plugins that are migrated without the permission of the plugin manager will be disabled. For that reason, when a plugin contract is instantiated, it must set the plugin manager contract as its admin.
 
 ### Queries
+
+## Security
+
+### Plugin Management Guidelines
+
+We outline the management process of plugins which is used in order to ensure the security and integrity of smart accounts. Plugins are essential components that enhance the functionality of smart accounts. However, it is crucial to follow certain protocols to protect against potential vulnerabilities and malicious activities.
+
+#### Auditing Plugins
+Before a plugin can be used by smart accounts, it must undergo a thorough auditing process. This involves a comprehensive review of the plugin's code and functionality to ensure that it meets the required security standards. Only audited plugins are allowed to be used by smart accounts.
+
+#### Contract Migration Restrictions
+Once a plugin contract is registered, it cannot be migrated without the permission of the plugin manager contract. This restriction ensures that any changes to the plugin's contract are carefully controlled and authorized. Unauthorized migration of a plugin contract is strictly prohibited. In the event that a plugin is migrated, the owner of the smart account associated with the plugin must be promptly notified. *(not implemented yet) Additionally, the migrated plugin will be automatically disabled until the user re-registers it. This mechanism ensures that users are aware of any changes to their plugins and have the opportunity to review and re-enable them.*
+
+#### Centralized Plugin Management
+The plugin manager has the authority to disable or remove a plugin at any time if it is found to be malicious or poses a security risk. This capability allows for swift action to be taken in response to identified threats, ensuring the overall security of the smart accounts.
+
+#### User Control
+Users have the ability to disable or remove a plugin from their smart accounts at any time. This ensures users to have full control over the plugins they choose to utilize and allows them to take immediate action if they suspect any issues or vulnerabilities.
+
+#### Authz Message Limitations
+It is important to note that authz messages cannot be used to change the state of plugins or interact with plugins. This limitation prevents unauthorized manipulation of plugins through the use of authz, further safeguarding the integrity of smart accounts.
+
+#### Multisig as Admin of 
+
+By adhering to these guidelines, we can ensure the secure and reliable operation of smart accounts while leveraging the benefits of plugins to enhance their functionality.
