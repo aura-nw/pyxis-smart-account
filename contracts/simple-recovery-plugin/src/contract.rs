@@ -132,11 +132,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 fn query_config(deps: Deps, address: String) -> String {
     let config = CONFIG_MAP
-        .may_load(deps.storage, &Addr::unchecked(address))
+        .load(deps.storage, &Addr::unchecked(address))
         .unwrap();
-    config
-        .and_then(|c| Some(serde_json_wasm::to_string(&c).unwrap()))
-        .unwrap_or(String::default())
+    serde_json_wasm::to_string(&config).unwrap()
 }
 
 /// Handling submessage reply.
