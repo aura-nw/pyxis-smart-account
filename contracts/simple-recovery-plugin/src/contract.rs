@@ -4,7 +4,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, Std
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, MigrateMsg, ExecuteMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{RecoveryConfig, CONFIG_MAP};
 
 // version info for migration info
@@ -52,9 +52,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Register { config } => {
-            handle_register(deps, env, info, config)
-        }
+        ExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         ExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
         ExecuteMsg::Recover {
             caller,

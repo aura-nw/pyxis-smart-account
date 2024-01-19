@@ -2,7 +2,7 @@ use std::vec;
 
 use cosmwasm_std::Addr;
 use cw_multi_test::Executor;
-use pyxis_sm::msg::{CallInfo, PyxisSudoMsg};
+use pyxis_sm::msg::{AuthzInfo, CallInfo, PyxisSudoMsg};
 use pyxis_sm::plugin_manager_msg::PluginType;
 
 use crate::msg::ExecuteMsg;
@@ -20,7 +20,9 @@ fn pre_execute_without_plugin() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);
@@ -59,7 +61,9 @@ fn pre_execute_with_a_plugin_always_reject() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);
@@ -98,7 +102,9 @@ fn pre_execute_and_plugin_approve() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);
@@ -156,7 +162,9 @@ fn pre_execute_and_one_plugin_reject() {
         &PyxisSudoMsg::PreExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);
@@ -175,7 +183,9 @@ fn after_execute_without_plugin_success() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);
@@ -214,7 +224,9 @@ fn after_execute_and_plugin_reject() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);
@@ -253,7 +265,9 @@ fn after_execute_and_plugin_approve() {
         &PyxisSudoMsg::AfterExecute {
             msgs: vec![],
             call_info: CallInfo::default(),
-            is_authz: false,
+            authz_info: AuthzInfo {
+                grantee: String::default(),
+            },
         },
     );
     println!("response: {:?}", response);

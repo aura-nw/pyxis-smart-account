@@ -7,7 +7,7 @@ use crate::error::ContractError;
 use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{UserConfig, USER_CONFIGS};
 
-use pyxis_sm::msg::{CallInfo, PyxisPluginExecuteMsg, SdkMsg};
+use pyxis_sm::msg::{AuthzInfo, CallInfo, PyxisPluginExecuteMsg, SdkMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:sample-plugin";
@@ -59,8 +59,8 @@ pub fn execute(
         PyxisPluginExecuteMsg::PreExecute {
             msgs,
             call_info,
-            is_authz,
-        } => handle_pre_execute(deps, env, info, msgs, call_info, is_authz),
+            authz_info,
+        } => handle_pre_execute(deps, env, info, msgs, call_info, authz_info),
         PyxisPluginExecuteMsg::AfterExecute { .. } => Ok(Response::new()),
     }
 }
@@ -88,7 +88,7 @@ pub fn handle_register(
                 }
                 None => Ok(UserConfig {
                     address: info.sender.clone(),
-                    config: config,
+                    config,
                 }),
             }
         },
@@ -114,7 +114,7 @@ pub fn handle_pre_execute(
     info: MessageInfo,
     _msgs: Vec<SdkMsg>,
     _call_info: CallInfo,
-    _is_authz: bool,
+    _authz_info: AuthzInfo,
 ) -> Result<Response, ContractError> {
     // load config of sender
     let user_config = USER_CONFIGS.load(deps.storage, &info.sender).unwrap();

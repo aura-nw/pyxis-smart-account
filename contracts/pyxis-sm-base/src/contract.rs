@@ -19,7 +19,7 @@ use crate::msg::{AllPluginsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, Que
 use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
 
 use pyxis_sm::msg::{
-    CallInfo, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, PyxisSudoMsg, SdkMsg,
+    AuthzInfo, CallInfo, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, PyxisSudoMsg, SdkMsg,
 };
 use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQueryMsg};
 
@@ -98,13 +98,13 @@ pub fn sudo(deps: DepsMut, env: Env, msg: PyxisSudoMsg) -> Result<Response, Cont
         PyxisSudoMsg::PreExecute {
             msgs,
             call_info,
-            is_authz,
-        } => pre_execute(deps, env, msgs, call_info, is_authz),
+            authz_info,
+        } => pre_execute(deps, env, msgs, call_info, authz_info),
         PyxisSudoMsg::AfterExecute {
             msgs,
             call_info,
-            is_authz,
-        } => after_execute(deps, env, msgs, call_info, is_authz),
+            authz_info,
+        } => after_execute(deps, env, msgs, call_info, authz_info),
         PyxisSudoMsg::Recover {
             caller,
             pub_key,
@@ -121,7 +121,7 @@ pub fn pre_execute(
     env: Env,
     msgs: Vec<SdkMsg>,
     call_info: CallInfo,
-    is_authz: bool,
+    authz_info: AuthzInfo,
 ) -> Result<Response, ContractError> {
     // if tx contains UnregisterPlugin or UpdatePlugin messages
     // make sure those plugins are not called at this time
@@ -183,7 +183,7 @@ pub fn pre_execute(
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
-                        is_authz,
+                        authz_info: authz_info.clone(),
                     },
                     vec![],
                 )
@@ -205,7 +205,7 @@ pub fn after_execute(
     env: Env,
     msgs: Vec<SdkMsg>,
     call_info: CallInfo,
-    is_authz: bool,
+    authz_info: AuthzInfo,
 ) -> Result<Response, ContractError> {
     // if tx contains RegisterPlugin, UnregisterPlugin or UpdatePlugin messages
     // make sure those plugins are not called at this time
@@ -246,7 +246,7 @@ pub fn after_execute(
             // execute call to this smart-account contract must be
             // UnregisterPlugin, RegisterPlugin or UpdatePlugin
             // only smart-account owner can execute those msgs
-            if is_authz {
+            if authz_info.is_authz() {
                 return Err(ContractError::Std(StdError::generic_err("Unauthorization")));
             }
 
@@ -289,7 +289,7 @@ pub fn after_execute(
                     &PyxisPluginExecuteMsg::AfterExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
-                        is_authz,
+                        authz_info: authz_info.clone(),
                     },
                     vec![],
                 )
@@ -467,7 +467,7 @@ pub fn unregister_plugin(
 
     PLUGINS.remove(deps.storage, &plugin_address);
 
-    // call plugin manager to check if this plugin is enabled  
+    // call plugin manager to check if this plugin is enabled
     let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
     let query_plugin_msg = PMQueryMsg::PluginInfo {
         address: plugin_address.to_string(),
