@@ -1,10 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, MigrateMsg, ExecuteMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{RecoveryConfig, CONFIG_MAP};
 
 // version info for migration info
@@ -52,9 +54,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Register { config } => {
-            handle_register(deps, env, info, config)
-        }
+        ExecuteMsg::Register { config } => handle_register(deps, env, info, config),
         ExecuteMsg::Unregister {} => handle_unregister(deps, env, info),
         ExecuteMsg::Recover {
             caller,
@@ -124,14 +124,17 @@ fn handle_recover(
 
 /// Handling contract query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        // Find matched incoming message variant and query them your custom logic
-        // and then construct your query response with the type usually defined
-        // `msg.rs` alongside with the query message itself.
-        //
-        // use `cosmwasm_std::to_binary` to serialize query response to json binary.
+        QueryMsg::Config { address } => to_json_binary(&query_config(deps, address)),
     }
+}
+
+fn query_config(deps: Deps, address: String) -> String {
+    let config = CONFIG_MAP
+        .load(deps.storage, &Addr::unchecked(address))
+        .unwrap();
+    serde_json_wasm::to_string(&config).unwrap()
 }
 
 /// Handling submessage reply.

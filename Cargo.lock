@@ -1813,6 +1813,7 @@ dependencies = [
  "cw-storage-plus 0.13.4",
  "cw2 0.13.4",
  "pyxis-sm",
+ "pyxis-sm-derive",
  "schemars",
  "serde",
  "thiserror",
