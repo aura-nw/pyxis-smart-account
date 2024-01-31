@@ -1,4 +1,4 @@
-use crate::state::{Plugin, PluginStatus};
+use crate::state::Plugin;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
@@ -17,10 +17,6 @@ pub enum ExecuteMsg {
     },
     UnregisterPlugin {
         plugin_address: Addr,
-    },
-    UpdatePlugin {
-        plugin_address: Addr,
-        status: PluginStatus,
     },
 }
 

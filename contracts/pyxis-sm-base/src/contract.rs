@@ -16,12 +16,15 @@ use serde_json_wasm::de::Error;
 
 use crate::error::ContractError;
 use crate::msg::{AllPluginsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, Plugin, PluginStatus, CONFIG, PLUGINS};
+use crate::state::{Config, Plugin, CONFIG, PLUGINS, QUERY_PLUGINS_STATUS};
 
 use pyxis_sm::msg::{
     CallInfo, PyxisPluginExecuteMsg, PyxisRecoveryPluginExecuteMsg, PyxisSudoMsg, SdkMsg,
 };
-use pyxis_sm::plugin_manager_msg::{PluginResponse, PluginType, QueryMsg as PMQueryMsg};
+use pyxis_sm::plugin_manager_msg::{
+    PluginResponse, PluginStatus, PluginType, QueryMsg as PMQueryMsg, QueryPluginsStatusResponse,
+    UnregisterStatus,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pyxis-sm-base";
@@ -85,10 +88,6 @@ pub fn execute(
         ExecuteMsg::UnregisterPlugin { plugin_address } => {
             unregister_plugin(deps, env, info, plugin_address)
         }
-        ExecuteMsg::UpdatePlugin {
-            plugin_address,
-            status,
-        } => update_plugin(deps, env, info, plugin_address, status),
     }
 }
 
@@ -154,32 +153,34 @@ pub fn pre_execute(
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
                 }
-                ExecuteMsg::UpdatePlugin {
-                    plugin_address,
-                    status: _,
-                } => {
-                    disable_plugins.push(plugin_address);
-                }
                 _ => {}
             }
         }
     }
 
-    // call the pre_execute message of all the plugins
-    let pre_execute_msgs = PLUGINS
+    let plugins_address = PLUGINS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
-        .filter(|(_, plugin)| {
-            plugin.status == PluginStatus::Active
-                && plugin.plugin_type != PluginType::Recovery
-                && !disable_plugins
-                    .iter()
-                    .any(|addr| addr == &plugin.contract_address)
-        })
-        .map(|(_, plugin)| {
+        .map(|(_, plugin)| plugin.contract_address.into_string())
+        .collect::<Vec<String>>();
+    let query_plugins_status = PMQueryMsg::PluginsStatus {
+        addresses: plugins_address,
+    };
+    let plugins_status_response: QueryPluginsStatusResponse =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: CONFIG.load(deps.storage)?.plugin_manager_addr.into_string(),
+            msg: to_json_binary(&query_plugins_status)?,
+        }))?;
+
+    // call the pre_execute message of all the plugins
+    let pre_execute_msgs = plugins_status_response
+        .plugins_status
+        .iter()
+        .filter(|plugin_status| plugin_status.status == PluginStatus::Active)
+        .map(|plugin_status| {
             CosmosMsg::Wasm(
                 wasm_execute(
-                    &plugin.contract_address,
+                    &plugin_status.address,
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
@@ -191,6 +192,9 @@ pub fn pre_execute(
             )
         })
         .collect::<Vec<CosmosMsg>>();
+
+    // save for later, trick to reduce tx's gas
+    QUERY_PLUGINS_STATUS.save(deps.storage, &plugins_status_response.plugins_status)?;
 
     Ok(Response::new()
         .add_attribute("action", "pre_execute")
@@ -261,31 +265,21 @@ pub fn after_execute(
                 ExecuteMsg::UnregisterPlugin { plugin_address } => {
                     disable_plugins.push(plugin_address);
                 }
-                ExecuteMsg::UpdatePlugin {
-                    plugin_address,
-                    status: _,
-                } => {
-                    disable_plugins.push(plugin_address);
-                }
             }
         }
     }
 
+    // load saved instead of query to manager
+    let query_plugins_status = QUERY_PLUGINS_STATUS.load(deps.storage)?;
+
     // call the pre_execute message of all the plugins
-    let after_execute_msgs = PLUGINS
-        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-        .map(|data| data.unwrap())
-        .filter(|(_, plugin)| {
-            plugin.status == PluginStatus::Active
-                && plugin.plugin_type != PluginType::Recovery
-                && !disable_plugins
-                    .iter()
-                    .any(|addr| addr == &plugin.contract_address)
-        })
-        .map(|(_, plugin)| {
+    let after_execute_msgs = query_plugins_status
+        .iter()
+        .filter(|plugin_status| plugin_status.status == PluginStatus::Active)
+        .map(|plugin| {
             CosmosMsg::Wasm(
                 wasm_execute(
-                    &plugin.contract_address,
+                    &plugin.address,
                     &PyxisPluginExecuteMsg::AfterExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
@@ -329,9 +323,7 @@ pub fn handle_recover(
     let recover_msgs = PLUGINS
         .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
         .map(|data| data.unwrap())
-        .filter(|(_, plugin)| {
-            plugin.status == PluginStatus::Active && plugin.plugin_type == PluginType::Recovery
-        })
+        .filter(|(_, plugin)| plugin.plugin_type == PluginType::Recovery)
         .map(|(_, plugin)| {
             CosmosMsg::Wasm(
                 wasm_execute(
@@ -387,8 +379,8 @@ pub fn register_plugin(
             msg: to_json_binary(&query_plugin_msg)?,
         }))?;
 
-    // check if plugin is enable
-    if !plugin_info.enabled {
+    // check if plugin is active
+    if !(plugin_info.status == PluginStatus::Active) {
         return Err(ContractError::Std(StdError::generic_err(
             "Plugin is disabled",
         )));
@@ -415,7 +407,6 @@ pub fn register_plugin(
             name: plugin_info.name,
             plugin_type: plugin_info.plugin_type.clone(),
             contract_address: plugin_address.clone(),
-            status: PluginStatus::Active,
             config: config.clone(),
         },
     )?;
@@ -478,9 +469,11 @@ pub fn unregister_plugin(
             msg: to_json_binary(&query_plugin_msg)?,
         }));
 
-    // if query error or plugin is diabled, just return
+    // if query error or plugin's unregister is not required, just return
     // else call unregister message
-    if plugin_info.is_err() || !plugin_info.unwrap().enabled {
+    if plugin_info.is_err()
+        || plugin_info.unwrap().unregister_status == UnregisterStatus::NotRequired
+    {
         return Ok(Response::new().add_attribute("action", "unregister_plugin"));
     } else {
         // call unregister in the plugin contract
@@ -494,45 +487,6 @@ pub fn unregister_plugin(
             .add_attribute("action", "unregister_plugin")
             .add_message(unregister_msg));
     }
-}
-
-fn update_plugin(
-    deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    plugin_address: Addr,
-    status: PluginStatus,
-) -> Result<Response, ContractError> {
-    let mut plugin = PLUGINS.load(deps.storage, &plugin_address)?;
-
-    assert!(plugin.status != status, "Plugin status not change");
-
-    match status {
-        PluginStatus::Inactive => {
-            // call plugin manager to check if this plugin is enabled
-            let plugin_manager_addr = CONFIG.load(deps.storage)?.plugin_manager_addr;
-            let query_plugin_msg = PMQueryMsg::PluginInfo {
-                address: plugin_address.to_string(),
-            };
-            let plugin_info: Result<PluginResponse, StdError> =
-                deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                    contract_addr: plugin_manager_addr.to_string(),
-                    msg: to_json_binary(&query_plugin_msg)?,
-                }));
-
-            if plugin_info.is_ok() && plugin_info.unwrap().enabled {
-                return Err(ContractError::Std(StdError::generic_err(
-                    "Plugin is enabled, cannot deactivate",
-                )));
-            }
-        }
-        _ => {}
-    }
-
-    plugin.status = status;
-    PLUGINS.save(deps.storage, &plugin_address, &plugin)?;
-
-    Ok(Response::new().add_attribute("action", "update_plugin"))
 }
 
 /// Handling contract query
