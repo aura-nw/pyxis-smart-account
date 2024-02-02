@@ -30,7 +30,7 @@ pub enum PluginStatus {
 }
 
 #[cw_serde]
-pub enum UnregisterStatus {
+pub enum UnregisterRequirement {
     Required,
     NotRequired,
 }
@@ -43,7 +43,7 @@ pub struct PluginResponse {
     pub address: String,
     pub code_id: u64,
     pub status: PluginStatus,
-    pub unregister_status: UnregisterStatus,
+    pub unregister_req: UnregisterRequirement,
 }
 
 #[cw_serde]

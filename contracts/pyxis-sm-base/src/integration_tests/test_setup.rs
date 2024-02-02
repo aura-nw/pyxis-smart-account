@@ -10,7 +10,7 @@ use cosmos_sdk_proto::traits::MessageExt;
 use cosmwasm_std::{coins, Addr};
 use pyxis_sm::plugin_manager_msg::PluginStatus;
 use pyxis_sm::plugin_manager_msg::PluginType;
-use pyxis_sm::plugin_manager_msg::UnregisterStatus;
+use pyxis_sm::plugin_manager_msg::UnregisterRequirement;
 use sample_plugin::msg::InstantiateMsg as PluginInstantiateMsg;
 use sample_plugin_manager::msg::{
     ExecuteMsg as PluginManagerExecuteMsg, InstantiateMsg as PluginManagerInstantiateMsg,
@@ -257,7 +257,7 @@ pub fn allow_plugin(
                 code_id: *code_ids.get(plugin_name).unwrap(),
                 version: "v0.1.0".to_string(),
                 status: PluginStatus::Active,
-                unregister_status: UnregisterStatus::Required,
+                unregister_req: UnregisterRequirement::Required,
             },
         },
         &vec![],

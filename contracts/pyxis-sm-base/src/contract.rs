@@ -23,7 +23,7 @@ use pyxis_sm::msg::{
 };
 use pyxis_sm::plugin_manager_msg::{
     PluginResponse, PluginStatus, PluginType, QueryMsg as PMQueryMsg, QueryPluginsStatusResponse,
-    UnregisterStatus,
+    UnregisterRequirement,
 };
 
 // version info for migration info
@@ -166,21 +166,20 @@ pub fn pre_execute(
     let query_plugins_status = PMQueryMsg::PluginsStatus {
         addresses: plugins_address,
     };
-    let plugins_status_response: QueryPluginsStatusResponse =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: CONFIG.load(deps.storage)?.plugin_manager_addr.into_string(),
-            msg: to_json_binary(&query_plugins_status)?,
-        }))?;
+    let plugins_status_response: QueryPluginsStatusResponse = deps.querier.query_wasm_smart(
+        CONFIG.load(deps.storage)?.plugin_manager_addr.into_string(),
+        &query_plugins_status,
+    )?;
 
     // call the pre_execute message of all the plugins
     let pre_execute_msgs = plugins_status_response
         .plugins_status
         .iter()
-        .filter(|plugin_status| plugin_status.status == PluginStatus::Active)
-        .map(|plugin_status| {
+        .filter(|plugin| plugin.status == PluginStatus::Active)
+        .map(|plugin| {
             CosmosMsg::Wasm(
                 wasm_execute(
-                    &plugin_status.address,
+                    &plugin.address,
                     &PyxisPluginExecuteMsg::PreExecute {
                         msgs: msgs.clone(),
                         call_info: call_info.clone(),
@@ -380,7 +379,7 @@ pub fn register_plugin(
         }))?;
 
     // check if plugin is active
-    if !(plugin_info.status == PluginStatus::Active) {
+    if plugin_info.status == PluginStatus::Inactive {
         return Err(ContractError::Std(StdError::generic_err(
             "Plugin is disabled",
         )));
@@ -472,7 +471,7 @@ pub fn unregister_plugin(
     // if query error or plugin's unregister is not required, just return
     // else call unregister message
     if plugin_info.is_err()
-        || plugin_info.unwrap().unregister_status == UnregisterStatus::NotRequired
+        || plugin_info.unwrap().unregister_req == UnregisterRequirement::NotRequired
     {
         return Ok(Response::new().add_attribute("action", "unregister_plugin"));
     } else {

@@ -187,12 +187,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&AllPluginsResponse { plugins })
         }
         QueryMsg::PluginsStatus { addresses } => {
-            let plugin_status = PLUGINS
-                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
-                .map(|data| data.unwrap())
-                .filter(|(_, plugin)| addresses.iter().any(|addr| addr == &plugin.address))
+            let plugin_status = addresses
+                .iter()
+                .map(|addr| (addr, PLUGINS.load(deps.storage, addr).unwrap()))
                 .map(|(addr, plugin)| QueryPluginStatus {
-                    address: addr,
+                    address: addr.to_string(),
                     status: plugin.status,
                 })
                 .collect::<Vec<QueryPluginStatus>>();

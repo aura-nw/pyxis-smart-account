@@ -22,4 +22,4 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub const PLUGINS: Map<&Addr, Plugin> = Map::new("plugins");
 
 // PLUGINS STATUS
-pub const QUERY_PLUGINS_STATUS: Item<Vec<QueryPluginStatus>> = Item::new("plugins status");
+pub const QUERY_PLUGINS_STATUS: Item<Vec<QueryPluginStatus>> = Item::new("plugins_status");
