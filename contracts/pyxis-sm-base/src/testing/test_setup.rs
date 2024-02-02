@@ -2,7 +2,7 @@ use crate::contract::{execute, instantiate, query, sudo as sudo_fn};
 use crate::msg::InstantiateMsg;
 use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
-use pyxis_sm::plugin_manager_msg::PluginType;
+use pyxis_sm::plugin_manager_msg::{PluginStatus, PluginType, UnregisterRequirement};
 use sample_plugin::{
     contract::{
         execute as plugin_execute, instantiate as plugin_instantiate, query as plugin_query,
@@ -157,7 +157,8 @@ pub fn allow_plugin(
                 address: contracts.get(plugin_name).unwrap().clone(),
                 code_id: *code_ids.get(plugin_name).unwrap(),
                 version: "v0.1.0".to_string(),
-                enabled: true,
+                status: PluginStatus::Active,
+                unregister_req: UnregisterRequirement::Required,
             },
         },
         &vec![],

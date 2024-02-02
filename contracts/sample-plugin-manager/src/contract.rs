@@ -11,7 +11,9 @@ use cw_storage_plus::Bound;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use crate::state::{Plugin, PLUGINS};
-use pyxis_sm::plugin_manager_msg::{AllPluginsResponse, PluginResponse, QueryMsg};
+use pyxis_sm::plugin_manager_msg::{
+    AllPluginsResponse, PluginResponse, QueryMsg, QueryPluginStatus, QueryPluginsStatusResponse,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:sample-plugin-manager";
@@ -183,6 +185,20 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .collect::<StdResult<_>>()?;
 
             to_json_binary(&AllPluginsResponse { plugins })
+        }
+        QueryMsg::PluginsStatus { addresses } => {
+            let plugin_status = addresses
+                .iter()
+                .map(|addr| (addr, PLUGINS.load(deps.storage, addr).unwrap()))
+                .map(|(addr, plugin)| QueryPluginStatus {
+                    address: addr.to_string(),
+                    status: plugin.status,
+                })
+                .collect::<Vec<QueryPluginStatus>>();
+
+            to_json_binary(&QueryPluginsStatusResponse {
+                plugins_status: plugin_status,
+            })
         }
     }
 }
